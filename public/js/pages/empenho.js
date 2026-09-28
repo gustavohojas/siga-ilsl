@@ -322,12 +322,12 @@ export async function renderEmpenho(container) {
             <!-- LINHA 2: CÓDIGOS, QUANTIDADE, UNIDADE E PERECÍVEL -->
             <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 1rem; align-items: end;">
                 <div class="form-group mb-0">
-                    <label class="form-label">Cód. Siafísico</label>
-                    <input type="text" class="form-control item-siafisico" placeholder="Opcional">
+                    <label class="form-label">Cód. Siafísico *</label>
+                    <input type="text" class="form-control item-siafisico" placeholder="Ex: 123456" required>
                 </div>
                 <div class="form-group mb-0">
-                    <label class="form-label">Cód. Compras</label>
-                    <input type="text" class="form-control item-compras" placeholder="Opcional">
+                    <label class="form-label">Cód. Compras *</label>
+                    <input type="text" class="form-control item-compras" placeholder="Ex: 654321" required>
                 </div>
                 <div class="form-group mb-0">
                     <label class="form-label">Quantidade *</label>
@@ -485,6 +485,23 @@ export async function renderEmpenho(container) {
                     showToast({ message: `Informe a descrição do item #${i + 1}.`, type: 'warning' });
                     btn.disabled = false;
                     btn.innerHTML = 'Salvar Nota de Empenho';
+                    node.querySelector('.item-desc').focus();
+                    return;
+                }
+
+                if (!siafisico) {
+                    showToast({ message: `Informe o Cód. Siafísico do item #${i + 1}.`, type: 'warning' });
+                    btn.disabled = false;
+                    btn.innerHTML = 'Salvar Nota de Empenho';
+                    node.querySelector('.item-siafisico').focus();
+                    return;
+                }
+
+                if (!compras) {
+                    showToast({ message: `Informe o Cód. Compras do item #${i + 1}.`, type: 'warning' });
+                    btn.disabled = false;
+                    btn.innerHTML = 'Salvar Nota de Empenho';
+                    node.querySelector('.item-compras').focus();
                     return;
                 }
 
@@ -492,6 +509,7 @@ export async function renderEmpenho(container) {
                     showToast({ message: `Informe uma quantidade válida para o item #${i + 1}.`, type: 'warning' });
                     btn.disabled = false;
                     btn.innerHTML = 'Salvar Nota de Empenho';
+                    node.querySelector('.item-qtd').focus();
                     return;
                 }
 

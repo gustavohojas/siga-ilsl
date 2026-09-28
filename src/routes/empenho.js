@@ -59,6 +59,16 @@ router.post('/', async (req, res) => {
             return res.status(400).json({ error: 'Dados incompletos para cadastro do empenho.' });
         }
 
+        for (let idx = 0; idx < itens.length; idx++) {
+            const item = itens[idx];
+            if (!item.codigo_siafisico || !String(item.codigo_siafisico).trim()) {
+                return res.status(400).json({ error: `Cód. Siafísico é obrigatório para o item #${idx + 1}.` });
+            }
+            if (!item.codigo_compras || !String(item.codigo_compras).trim()) {
+                return res.status(400).json({ error: `Cód. Compras é obrigatório para o item #${idx + 1}.` });
+            }
+        }
+
         let normalizedTipo = String(tipo_licitacao || '').toLowerCase();
         if (normalizedTipo.includes('preg') || normalizedTipo === 'pregao') {
             normalizedTipo = 'pregao';
