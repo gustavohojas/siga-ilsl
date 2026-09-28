@@ -225,7 +225,7 @@ export async function renderEmpenho(container) {
                                                         <td>${it.quantidade} ${it.unidade}</td>
                                                         <td><span class="badge ${it.quantidade_recebida >= it.quantidade ? 'badge-success' : 'badge-warning'}">${it.quantidade_recebida || 0} / ${it.quantidade}</span></td>
                                                         <td>${it.perecivel ? '<span class="badge badge-warning">Sim</span>' : '<span class="badge badge-role">Não</span>'}</td>
-                                                        <td>${it.garantia ? '<span class="badge badge-info">Sim (' + (dataGarFmt || 'Sem data') + ')</span>' : '<span class="badge badge-role">Não</span>'}</td>
+                                                        <td>${it.garantia ? ('<span class="badge badge-info">Sim' + (dataGarFmt ? ` (${dataGarFmt})` : '') + '</span>') : '<span class="badge badge-role">Não</span>'}</td>
                                                     </tr>
                                                 `; }).join('')}
                                             </tbody>
@@ -368,21 +368,10 @@ export async function renderEmpenho(container) {
             <div style="margin-top: 0.75rem; padding: 0.75rem 1rem; background: rgba(99, 102, 241, 0.05); border-radius: 8px; border: 1px solid rgba(99, 102, 241, 0.15); display: flex; align-items: center; gap: 1.5rem; flex-wrap: wrap;">
                 <label style="display: inline-flex; align-items: center; gap: 0.5rem; margin: 0; cursor: pointer; color: #fff; font-weight: 500;">
                     <input type="checkbox" class="item-gar" style="width: 1.15rem; height: 1.15rem; accent-color: var(--accent-primary);">
-                    Possui garantia?
+                    Possui garantia? <small style="color: var(--text-secondary); font-weight: normal; margin-left: 0.5rem;">(A data da garantia será informada no ato do recebimento)</small>
                 </label>
-                <div class="form-group mb-0" style="display: flex; align-items: center; gap: 0.5rem;">
-                    <label class="form-label mb-0" style="white-space: nowrap; font-size: 0.85rem;">Data da garantia:</label>
-                    <input type="date" class="form-control item-data-gar" disabled style="width: 160px;">
-                </div>
             </div>
         `;
-
-        const checkGar = card.querySelector('.item-gar');
-        const inputDataGar = card.querySelector('.item-data-gar');
-        checkGar.addEventListener('change', (e) => {
-            inputDataGar.disabled = !e.target.checked;
-            if (!e.target.checked) inputDataGar.value = '';
-        });
 
         card.querySelector('.btn-remove-item').addEventListener('click', () => {
             if (itensContainer.children.length > 1) {
@@ -479,7 +468,6 @@ export async function renderEmpenho(container) {
                 const nat = node.querySelector('.item-nat').value;
                 const per = node.querySelector('.item-per').value === 'Sim';
                 const gar = node.querySelector('.item-gar') ? node.querySelector('.item-gar').checked : false;
-                const dataGar = node.querySelector('.item-data-gar') ? node.querySelector('.item-data-gar').value : null;
 
                 if (!desc) {
                     showToast({ message: `Informe a descrição do item #${i + 1}.`, type: 'warning' });
@@ -513,23 +501,16 @@ export async function renderEmpenho(container) {
                     return;
                 }
 
-                if (gar && !dataGar) {
-                    showToast({ message: `Informe a data de garantia para o item #${i + 1}.`, type: 'warning' });
-                    btn.disabled = false;
-                    btn.innerHTML = 'Salvar Nota de Empenho';
-                    return;
-                }
-
                 itens.push({
                     descricao: desc,
                     quantidade: qtd,
                     unidade: un,
-                    codigo_siafisico: siafisico || null,
-                    codigo_compras: compras || null,
+                    codigo_siafisico: siafisico,
+                    codigo_compras: compras,
                     natureza_despesa: nat || null,
                     perecivel: per,
                     garantia: gar,
-                    data_garantia: dataGar || null
+                    data_garantia: null
                 });
             }
 
