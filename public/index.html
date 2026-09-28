@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="SIGA-ILSL - Sistema Integrado de Gestão de Almoxarifado">
+    <title>SIGA-ILSL - Sistema Integrado de Gestão de Almoxarifado</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="css/style.css?v=9">
+</head>
+<body>
+    <div id="app">
+        <!-- Fallback enquanto o JS carrega -->
+        <div style="display:flex;align-items:center;justify-content:center;min-height:100vh;color:#94a3b8;font-family:Inter,sans-serif;">
+            <p>Carregando sistema...</p>
+        </div>
+    </div>
+    <script>
+        // Capturar erros de módulos ES para debug
+        window.addEventListener('error', function(e) {
+            console.error('Erro global:', e.message, e.filename, e.lineno);
+            var app = document.getElementById('app');
+            if (app && !app.dataset.loaded) {
+                app.innerHTML = '<div style="padding:2rem;color:#ef4444;font-family:Inter,sans-serif;">' +
+                    '<h2>Erro ao carregar o sistema</h2>' +
+                    '<p>' + e.message + '</p>' +
+                    '<p>Arquivo: ' + (e.filename || 'desconhecido') + ' linha ' + (e.lineno || '?') + '</p>' +
+                    '<p style="margin-top:1rem;color:#94a3b8;">Pressione F12 para ver detalhes no console.</p></div>';
+            }
+        });
+    </script>
+    <script type="module" src="js/app.js?v=9"></script>
+</body>
+</html>
