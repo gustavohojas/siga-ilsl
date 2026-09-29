@@ -11,7 +11,7 @@ router.get('/', async (req, res) => {
     try {
         const { all } = getDb();
         const dispensacoes = await all(`
-            SELECT d.id, d.quantidade, d.criado_em, 
+            SELECT d.id, d.quantidade, d.criado_em, COALESCE(d.lote, e.lote) as lote,
                    e.descricao as estoque_descricao, e.unidade,
                    cc.nome as centro_consumidor_nome, cc.codigo as centro_consumidor_codigo,
                    u.nome as usuario_nome
@@ -44,7 +44,8 @@ router.get('/estoque/buscar', async (req, res) => {
                 WHERE quantidade_atual > 0 AND (
                     codigo_siafisico ILIKE $1 OR 
                     codigo_compras ILIKE $1 OR 
-                    descricao ILIKE $1
+                    descricao ILIKE $1 OR
+                    lote ILIKE $1
                 )
                 ORDER BY descricao ASC
             `, [searchTerm]);
@@ -69,7 +70,7 @@ router.post('/', async (req, res) => {
         }
 
         const result = await transaction(async (tx) => {
-            const itemEstoque = await tx.get('SELECT quantidade_atual FROM estoque WHERE id = $1', [estoque_id]);
+            const itemEstoque = await tx.get('SELECT quantidade_atual, lote FROM estoque WHERE id = $1', [estoque_id]);
             
             if (!itemEstoque) {
                 throw new Error('Item de estoque não encontrado.');
@@ -90,9 +91,9 @@ router.post('/', async (req, res) => {
             await tx.run('UPDATE estoque SET quantidade_atual = quantidade_atual - $1 WHERE id = $2', [qtdSolicitada, estoque_id]);
 
             const info = await tx.run(`
-                INSERT INTO dispensacoes (estoque_id, centro_consumidor_id, quantidade, usuario_id)
-                VALUES ($1, $2, $3, $4)
-            `, [estoque_id, centro_consumidor_id, qtdSolicitada, usuario_id]);
+                INSERT INTO dispensacoes (estoque_id, centro_consumidor_id, quantidade, usuario_id, lote)
+                VALUES ($1, $2, $3, $4, $5)
+            `, [estoque_id, centro_consumidor_id, qtdSolicitada, usuario_id, itemEstoque.lote || null]);
 
             return { id: info.lastInsertRowid };
         });

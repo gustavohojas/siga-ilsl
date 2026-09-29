@@ -40,6 +40,7 @@ export async function renderRecebimento(container) {
                                             <th>Já Rec.</th>
                                             <th>Qtd a Rec.</th>
                                             <th>Cód. Barras</th>
+                                            <th>Lote</th>
                                             <th>Nota Fiscal</th>
                                             <th>Data Entrega</th>
                                             <th>Perecível?</th>
@@ -92,8 +93,8 @@ export async function renderRecebimento(container) {
 
                         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-top: 1rem;">
                             <div class="form-group">
-                                <label class="form-label" for="doador-nf">Nota Fiscal (Opcional)</label>
-                                <input type="text" id="doador-nf" class="form-control">
+                                <label class="form-label" for="doador-nf">Nota Fiscal *</label>
+                                <input type="text" id="doador-nf" class="form-control" required placeholder="Número da Nota Fiscal">
                             </div>
                             <div class="form-group">
                                 <label class="form-label" for="doador-data">Data de Entrega</label>
@@ -185,6 +186,7 @@ export async function renderRecebimento(container) {
                             '<td>' + (item.quantidade_recebida || 0) + '</td>' +
                             '<td><input type="number" class="form-control item-qtd-rec" value="' + pendente + '" min="1" max="' + pendente + '" style="width:80px;" disabled></td>' +
                             '<td><input type="text" class="form-control item-cod" placeholder="Bipe/digite" style="width:120px;" disabled></td>' +
+                            '<td><input type="text" class="form-control item-lote" placeholder="Lote" style="width:110px;" disabled></td>' +
                             '<td><input type="text" class="form-control item-nf" placeholder="Nº NF" style="width:105px;" disabled></td>' +
                             '<td><input type="date" class="form-control item-data" value="' + today + '" style="width:130px;" disabled></td>' +
                             '<td>' +
@@ -206,6 +208,7 @@ export async function renderRecebimento(container) {
                         const check = tr.querySelector('.item-check');
                         const qtdRec = tr.querySelector('.item-qtd-rec');
                         const cod = tr.querySelector('.item-cod');
+                        const lote = tr.querySelector('.item-lote');
                         const nf = tr.querySelector('.item-nf');
                         const data = tr.querySelector('.item-data');
                         const per = tr.querySelector('.item-per');
@@ -217,6 +220,7 @@ export async function renderRecebimento(container) {
                             const isChecked = ev.target.checked;
                             qtdRec.disabled = !isChecked;
                             cod.disabled = !isChecked;
+                            lote.disabled = !isChecked;
                             nf.disabled = !isChecked;
                             data.disabled = !isChecked;
                             per.disabled = !isChecked;
@@ -326,6 +330,7 @@ export async function renderRecebimento(container) {
                     item_empenho_id: parseInt(cb.getAttribute('data-id')),
                     quantidade: parseFloat(tr.querySelector('.item-qtd-rec').value),
                     codigo_barras: tr.querySelector('.item-cod').value || null,
+                    lote: tr.querySelector('.item-lote').value.trim() || null,
                     nota_fiscal: tr.querySelector('.item-nf').value || null,
                     data_entrega: tr.querySelector('.item-data').value || null,
                     perecivel: isPer,
@@ -358,7 +363,7 @@ export async function renderRecebimento(container) {
 
     const createDoacaoItem = () => {
         const div = document.createElement('div');
-        div.style.cssText = 'display:grid; grid-template-columns:2fr 1fr 1fr 1.2fr 1fr 1.2fr 1fr 1.2fr auto; gap:0.5rem; align-items:end; border:1px solid var(--border-glass); padding:1rem; border-radius:8px;';
+        div.style.cssText = 'display:grid; grid-template-columns:2fr 1fr 1fr 1.2fr 1.1fr 1fr 1.2fr 1fr 1.2fr auto; gap:0.5rem; align-items:end; border:1px solid var(--border-glass); padding:1rem; border-radius:8px;';
 
         div.innerHTML =
             '<div class="form-group" style="margin-bottom:0">' +
@@ -383,6 +388,10 @@ export async function renderRecebimento(container) {
             '<div class="form-group" style="margin-bottom:0">' +
                 '<label class="form-label" style="font-size:0.8rem">Cód. Barras</label>' +
                 '<input type="text" class="form-control d-cod">' +
+            '</div>' +
+            '<div class="form-group" style="margin-bottom:0">' +
+                '<label class="form-label" style="font-size:0.8rem">Lote</label>' +
+                '<input type="text" class="form-control d-lote" placeholder="Lote">' +
             '</div>' +
             '<div class="form-group" style="margin-bottom:0">' +
                 '<label class="form-label" style="font-size:0.8rem">Perecível?</label>' +
@@ -436,6 +445,13 @@ export async function renderRecebimento(container) {
     document.getElementById('form-rec-doacao').addEventListener('submit', async (e) => {
         e.preventDefault();
 
+        const nfVal = document.getElementById('doador-nf').value.trim();
+        if (!nfVal) {
+            showToast({ message: 'A Nota Fiscal é obrigatória para recebimento de doação.', type: 'warning' });
+            document.getElementById('doador-nf').focus();
+            return;
+        }
+
         const btn = document.getElementById('btn-submit-doacao');
         btn.disabled = true;
         btn.innerHTML = 'Salvando...';
@@ -471,6 +487,7 @@ export async function renderRecebimento(container) {
                     unidade: node.querySelector('.d-un').value,
                     quantidade: parseFloat(node.querySelector('.d-qtd').value),
                     codigo_barras: node.querySelector('.d-cod').value || null,
+                    lote: node.querySelector('.d-lote').value.trim() || null,
                     perecivel: isPer,
                     validade: isPer ? val : null,
                     garantia: isGar,
@@ -492,7 +509,7 @@ export async function renderRecebimento(container) {
                     endereco: document.getElementById('doador-endereco').value || null,
                     telefone: document.getElementById('doador-telefone').value || null
                 },
-                nota_fiscal: document.getElementById('doador-nf').value || null,
+                nota_fiscal: nfVal,
                 data_entrega: document.getElementById('doador-data').value,
                 itens
             };

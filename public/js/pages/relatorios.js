@@ -11,6 +11,7 @@ export async function renderRelatorios(container) {
                     <button class="btn btn-primary tab-btn" data-target="tab-estoque">Estoque</button>
                     <button class="btn btn-secondary tab-btn" data-target="tab-empresa">Fornecedor / Empresa</button>
                     <button class="btn btn-secondary tab-btn" data-target="tab-centro">Centro Consumidor</button>
+                    <button class="btn btn-secondary tab-btn" data-target="tab-lote"><i class="fas fa-barcode"></i> Rastreabilidade por Lote</button>
                 </div>
                 
                 <div class="card-body">
@@ -69,6 +70,26 @@ export async function renderRelatorios(container) {
                             <button class="btn btn-secondary btn-excel" id="btn-excel-centro" data-url=""><i class="fas fa-file-excel"></i> Exportar Excel</button>
                         </div>
                         <div id="relatorio-centro-content" style="overflow-x: auto;"></div>
+                    </div>
+
+                    <!-- LOTE TAB -->
+                    <div id="tab-lote" class="tab-content" style="display: none;">
+                        <div style="display: flex; gap: 1rem; margin-bottom: 1rem; flex-wrap: wrap; align-items: center;">
+                            <input type="text" id="lote-search-input" class="form-control" placeholder="Buscar por Lote, Produto ou Código..." style="max-width: 320px;">
+                            
+                            <select id="lote-situacao-select" class="form-control" style="max-width: 260px;">
+                                <option value="todos">Todos (Estoque + Dispensados)</option>
+                                <option value="estoque">Apenas em Estoque</option>
+                                <option value="dispensado">Apenas Dispensados</option>
+                            </select>
+                            
+                            <button class="btn btn-primary" id="btn-gerar-lote">Gerar Relatório</button>
+                            <button class="btn btn-secondary btn-print"><i class="fas fa-print"></i> Imprimir</button>
+                            <button class="btn btn-secondary btn-excel" id="btn-excel-lote" data-url=""><i class="fas fa-file-excel"></i> Exportar Excel</button>
+                        </div>
+                        <div id="relatorio-lote-content" style="overflow-x: auto;">
+                            <p class="text-center text-muted">Informe o lote ou produto e clique em Gerar Relatório.</p>
+                        </div>
                     </div>
 
                 </div>
@@ -347,5 +368,86 @@ export async function renderRelatorios(container) {
         } catch (error) {
             centroContent.innerHTML = '<p class="text-danger">Erro ao carregar relatório.</p>';
         }
+    });
+
+    // Rastreabilidade de Lote
+    const loteSearchInput = document.getElementById('lote-search-input');
+    const loteSituacaoSelect = document.getElementById('lote-situacao-select');
+    const btnGerarLote = document.getElementById('btn-gerar-lote');
+    const loteContent = document.getElementById('relatorio-lote-content');
+    const excelLote = document.getElementById('btn-excel-lote');
+
+    const gerarRelatorioLote = async () => {
+        const q = loteSearchInput.value.trim();
+        const situacao = loteSituacaoSelect.value;
+        const url = `/relatorios/lote/rastreabilidade?q=${encodeURIComponent(q)}&situacao=${situacao}`;
+        excelLote.setAttribute('data-url', url);
+
+        loteContent.innerHTML = '<p class="text-center text-muted">Carregando...</p>';
+
+        try {
+            const data = await api.get(url);
+            if (!data || data.length === 0) {
+                loteContent.innerHTML = '<p class="text-center text-muted">Nenhum registro encontrado para este filtro.</p>';
+                return;
+            }
+
+            let html = `
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>Situação</th>
+                            <th>Lote</th>
+                            <th>Produto / Descrição</th>
+                            <th>Cód. Siafísico / Compras</th>
+                            <th>Quantidade</th>
+                            <th>Validade</th>
+                            <th>Localização / Destino</th>
+                            <th>Data</th>
+                            <th>Responsável</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+            `;
+
+            html += data.map(row => {
+                const isEstoque = row.situacao === 'Em Estoque';
+                const situacaoBadge = isEstoque 
+                    ? '<span class="badge badge-success" style="font-size:0.85rem;"><i class="fas fa-box"></i> Em Estoque</span>'
+                    : '<span class="badge badge-info" style="font-size:0.85rem;"><i class="fas fa-dolly"></i> Dispensado</span>';
+                
+                const loteBadge = row.lote 
+                    ? `<span style="font-family:monospace; background:rgba(59,130,246,0.15); color:#60a5fa; padding:3px 8px; border-radius:4px; font-weight:600; font-size:0.9rem;">${row.lote}</span>` 
+                    : '<span style="color:var(--text-muted);">-</span>';
+
+                const codigos = [row.codigo_siafisico, row.codigo_compras].filter(Boolean).join(' / ') || '-';
+                const dataFormatada = row.data_registro ? new Date(row.data_registro).toLocaleString('pt-BR') : '-';
+                const dataValidade = row.validade ? new Date(row.validade).toLocaleDateString('pt-BR') : '-';
+
+                return `
+                    <tr>
+                        <td>${situacaoBadge}</td>
+                        <td>${loteBadge}</td>
+                        <td><strong>${row.descricao}</strong></td>
+                        <td>${codigos}</td>
+                        <td><strong>${row.quantidade} ${row.unidade || ''}</strong></td>
+                        <td>${dataValidade}</td>
+                        <td><span style="font-weight:500;">${row.localizacao_destino}</span></td>
+                        <td>${dataFormatada}</td>
+                        <td>${row.operador || '-'}</td>
+                    </tr>
+                `;
+            }).join('');
+
+            html += '</tbody></table>';
+            loteContent.innerHTML = html;
+        } catch (error) {
+            loteContent.innerHTML = '<p class="text-danger text-center">Erro ao carregar relatório de rastreabilidade de lote.</p>';
+        }
+    };
+
+    btnGerarLote.addEventListener('click', gerarRelatorioLote);
+    loteSearchInput.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') gerarRelatorioLote();
     });
 }

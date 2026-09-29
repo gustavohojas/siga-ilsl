@@ -166,6 +166,7 @@ async function initDb() {
             item_empenho_id INTEGER REFERENCES itens_empenho(id),
             descricao TEXT,
             codigo_barras TEXT,
+            lote TEXT,
             perecivel BOOLEAN DEFAULT FALSE,
             quantidade NUMERIC NOT NULL,
             unidade TEXT,
@@ -183,6 +184,7 @@ async function initDb() {
             codigo_compras TEXT,
             descricao TEXT NOT NULL,
             codigo_barras TEXT,
+            lote TEXT,
             perecivel BOOLEAN DEFAULT FALSE,
             unidade TEXT NOT NULL,
             quantidade_atual NUMERIC NOT NULL,
@@ -206,6 +208,7 @@ async function initDb() {
             centro_consumidor_id INTEGER NOT NULL REFERENCES centros_consumidores(id),
             quantidade NUMERIC NOT NULL,
             usuario_id INTEGER NOT NULL REFERENCES usuarios(id),
+            lote TEXT,
             criado_em TIMESTAMP WITH TIME ZONE DEFAULT NOW()
         );
 
@@ -222,8 +225,11 @@ async function initDb() {
         ALTER TABLE itens_empenho ADD COLUMN IF NOT EXISTS data_garantia DATE;
         ALTER TABLE itens_recebimento ADD COLUMN IF NOT EXISTS garantia BOOLEAN DEFAULT FALSE;
         ALTER TABLE itens_recebimento ADD COLUMN IF NOT EXISTS data_garantia DATE;
+        ALTER TABLE itens_recebimento ADD COLUMN IF NOT EXISTS lote TEXT;
         ALTER TABLE estoque ADD COLUMN IF NOT EXISTS garantia BOOLEAN DEFAULT FALSE;
         ALTER TABLE estoque ADD COLUMN IF NOT EXISTS data_garantia DATE;
+        ALTER TABLE estoque ADD COLUMN IF NOT EXISTS lote TEXT;
+        ALTER TABLE dispensacoes ADD COLUMN IF NOT EXISTS lote TEXT;
     `);
 
     // 1. Carga Inicial do Administrador (executada apenas uma vez; se o usuário excluir futuramente, não recria)

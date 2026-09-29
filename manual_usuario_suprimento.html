@@ -1,0 +1,701 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <title>Manual do Usuário - Perfil Suprimento | SIGA-ILSL</title>
+    <style>
+        @page {
+            size: A4;
+            margin: 20mm 15mm 20mm 15mm;
+            @bottom-right {
+                content: counter(page);
+            }
+        }
+        
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, Roboto, Helvetica, Arial, sans-serif;
+            color: #1e293b;
+            background: #fff;
+            line-height: 1.6;
+            font-size: 11pt;
+        }
+
+        /* Capa */
+        .cover {
+            height: 250mm;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            page-break-after: always;
+            padding: 20mm 10mm;
+            border-left: 6px solid #4f46e5;
+        }
+
+        .cover-header h3 {
+            font-size: 14pt;
+            color: #64748b;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            font-weight: 600;
+        }
+
+        .cover-title {
+            margin-top: 40mm;
+        }
+
+        .cover-title h1 {
+            font-size: 32pt;
+            color: #0f172a;
+            font-weight: 800;
+            line-height: 1.2;
+            margin-bottom: 5mm;
+        }
+
+        .cover-title .subtitle {
+            font-size: 18pt;
+            color: #4f46e5;
+            font-weight: 600;
+            margin-bottom: 8mm;
+        }
+
+        .cover-title p {
+            font-size: 13pt;
+            color: #475569;
+            max-width: 140mm;
+        }
+
+        .cover-footer {
+            border-top: 1px solid #e2e8f0;
+            padding-top: 6mm;
+            font-size: 10pt;
+            color: #64748b;
+        }
+
+        /* Estrutura de Conteúdo */
+        .chapter {
+            margin-bottom: 8mm;
+        }
+
+        h2 {
+            font-size: 16pt;
+            color: #0f172a;
+            border-bottom: 2px solid #e2e8f0;
+            padding-bottom: 2mm;
+            margin-top: 6mm;
+            margin-bottom: 4mm;
+            page-break-after: avoid;
+            page-break-inside: avoid;
+        }
+
+        h3 {
+            font-size: 12pt;
+            color: #1e293b;
+            margin-top: 5mm;
+            margin-bottom: 2.5mm;
+            page-break-after: avoid;
+            page-break-inside: avoid;
+        }
+
+        h4 {
+            font-size: 10.5pt;
+            color: #334155;
+            margin-top: 3.5mm;
+            margin-bottom: 2mm;
+            page-break-after: avoid;
+            page-break-inside: avoid;
+        }
+
+        p {
+            margin-bottom: 3mm;
+            text-align: justify;
+        }
+
+        ul, ol {
+            margin-left: 6mm;
+            margin-bottom: 4mm;
+        }
+
+        li {
+            margin-bottom: 1.5mm;
+        }
+
+        /* Caixas de Destaque */
+        .alert-box {
+            padding: 4mm 5mm;
+            border-radius: 6px;
+            margin: 4mm 0;
+            font-size: 10.5pt;
+            page-break-inside: avoid;
+        }
+
+        .alert-info {
+            background-color: #eff6ff;
+            border-left: 4px solid #3b82f6;
+            color: #1e40af;
+        }
+
+        .alert-warning {
+            background-color: #fffbeb;
+            border-left: 4px solid #f59e0b;
+            color: #92400e;
+        }
+
+        .alert-tip {
+            background-color: #f0fdf4;
+            border-left: 4px solid #10b981;
+            color: #065f46;
+        }
+
+        /* Passos numerados */
+        .step-container {
+            margin: 4mm 0;
+            page-break-inside: avoid;
+        }
+
+        .step-item {
+            display: flex;
+            gap: 4mm;
+            margin-bottom: 3mm;
+            align-items: flex-start;
+        }
+
+        .step-number {
+            background: #4f46e5;
+            color: white;
+            font-weight: bold;
+            font-size: 9pt;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            margin-top: 1mm;
+        }
+
+        .step-content {
+            flex: 1;
+        }
+
+        /* Tabelas */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 4mm 0;
+            font-size: 10pt;
+            page-break-inside: avoid;
+        }
+
+        th, td {
+            border: 1px solid #cbd5e1;
+            padding: 2.5mm 3.5mm;
+            text-align: left;
+        }
+
+        th {
+            background-color: #f1f5f9;
+            color: #0f172a;
+            font-weight: 600;
+        }
+
+        tr:nth-child(even) {
+            background-color: #f8fafc;
+        }
+
+        /* Badges */
+        .badge {
+            display: inline-block;
+            padding: 1mm 2.5mm;
+            font-size: 8.5pt;
+            font-weight: 600;
+            border-radius: 4px;
+            text-transform: uppercase;
+        }
+
+        .badge-success { background: #dcfce7; color: #15803d; }
+        .badge-warning { background: #fef3c7; color: #b45309; }
+        .badge-info { background: #e0e7ff; color: #4338ca; }
+        .badge-danger { background: #fee2e2; color: #b91c1c; }
+
+        .footer-note {
+            font-size: 8.5pt;
+            color: #94a3b8;
+            margin-top: 8mm;
+            text-align: center;
+            border-top: 1px solid #f1f5f9;
+            padding-top: 3mm;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- CAPA -->
+    <div class="cover">
+        <div class="cover-header">
+            <h3>Instituto Lauro de Souza Lima (ILSL)</h3>
+            <p style="font-size: 10pt; color: #64748b;">Gestão de Materiais e Suprimentos</p>
+        </div>
+
+        <div class="cover-title">
+            <div class="subtitle">SIGA-ILSL</div>
+            <h1>Manual Operacional do Usuário</h1>
+            <p>Guia prático para rotinas diárias de gestão de empenhos, recebimento de materiais, controle de validade e garantia, dispensação e relatórios.</p>
+            <div style="margin-top: 6mm;">
+                <span class="badge badge-info" style="font-size: 11pt; padding: 2mm 4mm;">Perfil: Suprimento</span>
+            </div>
+        </div>
+
+        <div class="cover-footer">
+            <p><strong>Sistema Integrado de Gestão de Almoxarifado</strong> | Versão 1.0 (2026)</p>
+            <p>Documento de uso interno exclusivo dos operadores de almoxarifado e suprimentos.</p>
+        </div>
+    </div>
+
+    <!-- SUMÁRIO / APRESENTAÇÃO -->
+    <div class="chapter">
+        <h2>1. Apresentação do Sistema</h2>
+        <p>O <strong>SIGA-ILSL</strong> é a plataforma oficial integrada desenvolvida para modernizar, agilizar e rastrear todas as movimentações de materiais do almoxarifado do Instituto Lauro de Souza Lima.</p>
+        
+        <p>Este manual é dedicado exclusivamente aos usuários do perfil <strong>Suprimento</strong>, apresentando o passo a passo objetivo para operar o sistema com segurança, exatidão e eficiência.</p>
+
+        <div class="alert-box alert-info">
+            <strong>Escopo do Perfil Suprimento:</strong> Os operadores com este perfil possuem acesso irrestrito às rotinas de estoque, empenhos, conferência física de recebimento, saída/dispensação e relatórios analíticos com exportação para Excel. A gestão de contas de usuários é uma atribuição exclusiva do Administrador.
+        </div>
+
+        <h3>Visão Geral dos Módulos Disponíveis</h3>
+        <table>
+            <thead>
+                <tr>
+                    <th style="width: 25%;">Módulo</th>
+                    <th>Finalidade Operacional</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><strong>Visão Geral (Dashboard)</strong></td>
+                    <td>Acompanhamento em tempo real de itens totais, lotes com validade próxima do vencimento, garantias ativas e histórico de dispensações recentes.</td>
+                </tr>
+                <tr>
+                    <td><strong>Notas de Empenho</strong></td>
+                    <td>Cadastro e consulta de Notas de Empenho (NE), fornecedores, prazos contratuais e materiais autorizados.</td>
+                </tr>
+                <tr>
+                    <td><strong>Recebimento</strong></td>
+                    <td>Entrada física no estoque via conferência de Nota de Empenho ou por Doação, registro de NF, lote/validade e prazos de garantia.</td>
+                </tr>
+                <tr>
+                    <td><strong>Dispensação</strong></td>
+                    <td>Baixa e entrega de produtos para os Centros Consumidores (setores), com busca inteligente e suporte a leitor de código de barras.</td>
+                </tr>
+                <tr>
+                    <td><strong>Centros Consumidores</strong></td>
+                    <td>Visualização e cadastro dos setores hospitalares e administrativos solicitantes.</td>
+                </tr>
+                <tr>
+                    <td><strong>Naturezas de Despesa</strong></td>
+                    <td>Consulta e organização das categorias orçamentárias de materiais.</td>
+                </tr>
+                <tr>
+                    <td><strong>Relatórios</strong></td>
+                    <td>Emissão de listagens completas para conferência, controle de perecíveis, controle de garantia e exportação direta em planilhas Excel (.xlsx).</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <!-- ACESSO E LOGIN -->
+    <div class="chapter">
+        <h2>2. Acesso e Primeiro Login</h2>
+        <p>O acesso ao SIGA-ILSL é realizado diretamente pelo navegador de internet (Google Chrome, Microsoft Edge ou Mozilla Firefox) através de qualquer computador conectado à rede local interna do hospital.</p>
+
+        <div class="step-container">
+            <div class="step-item">
+                <div class="step-number">1</div>
+                <div class="step-content">
+                    <strong>Abra o navegador</strong> e digite o endereço fornecido pela equipe de Tecnologia/Infraestrutura (exemplo: <code>http://10.x.x.x:3000</code> ou endereço interno correspondente).
+                </div>
+            </div>
+            <div class="step-item">
+                <div class="step-number">2</div>
+                <div class="step-content">
+                    <strong>Informe seu CPF:</strong> Digite os 11 números do seu CPF cadastrado pelo Administrador (a pontuação de pontos e traço é preenchida automaticamente).
+                </div>
+            </div>
+            <div class="step-item">
+                <div class="step-number">3</div>
+                <div class="step-content">
+                    <strong>Digite sua senha de acesso</strong> e clique no botão <strong>"Entrar no Sistema"</strong>.
+                </div>
+            </div>
+        </div>
+
+        <div class="alert-box alert-warning">
+            <strong>Atenção com as Credenciais:</strong> Sua conta de usuário é pessoal e intransferível. Todas as entradas de mercadorias e dispensações efetuadas ficam gravadas com o registro do seu usuário para fins de rastreabilidade e auditoria.
+        </div>
+
+        <h3 style="margin-top: 8mm;">Barra Superior e Navegação</h3>
+        <p>Ao entrar no sistema, você verá:</p>
+        <ul>
+            <li><strong>Menu Lateral (Sidebar):</strong> Permite navegar rapidamente entre os módulos operacionais com um clique.</li>
+            <li><strong>Cabeçalho:</strong> Exibe seu nome, o selo <span class="badge badge-info">Suprimento</span> e o botão <strong>Sair</strong> para encerrar sua sessão com segurança ao término das atividades diárias.</li>
+        </ul>
+    </div>
+
+    <!-- DASHBOARD -->
+    <div class="chapter">
+        <h2>3. Visão Geral (Dashboard)</h2>
+        <p>A tela de Visão Geral funciona como o painel de bordo central do almoxarifado, trazendo métricas imediatas e avisos preventivos para tomada de decisão.</p>
+
+        <h3>Cards de Indicadores (Métricas Rápidas)</h3>
+        <p>No topo da tela, você encontra cards interativos que funcionam como atalhos diretos:</p>
+        <ul>
+            <li><strong>Total de Itens em Estoque:</strong> Quantidade consolidada de unidades físicas armazenadas. Clicar no card leva direto ao Relatório de Estoque Total.</li>
+            <li><strong>Empenhos Ativos:</strong> Quantidade de Notas de Empenho com fornecimento em andamento.</li>
+            <li><strong>Centros Consumidores:</strong> Número de setores cadastrados aptos a receber materiais.</li>
+            <li><strong>Itens Perecíveis / Validade:</strong> Quantidade de itens com data de validade próxima ou vencida. Clicar no card abre a relação de perecíveis.</li>
+            <li><strong>Itens em Garantia:</strong> Quantidade de produtos que possuem cobertura de garantia técnica ativa ou a vencer.</li>
+        </ul>
+
+        <h3>Tabelas de Alerta e Acompanhamento</h3>
+        <ul>
+            <li><strong>Itens Próximos do Vencimento:</strong> Lista imediata dos 5 materiais perecíveis com validade mais crítica. Datas já vencidas aparecem em destaque vermelho (<span class="badge badge-danger">Vencido</span>).</li>
+            <li><strong>Itens com Garantia:</strong> Tabela com os produtos sob prazo de garantia técnica, permitindo verificar a cobertura antes de solicitar reparo ou troca com fornecedores.</li>
+            <li><strong>Últimas Atividades:</strong> Histórico instantâneo das últimas dispensações realizadas no dia (item entregue, quantidade e setor beneficiado).</li>
+        </ul>
+    </div>
+
+    <!-- NOTAS DE EMPENHO -->
+    <div class="chapter">
+        <h2>4. Gestão de Notas de Empenho</h2>
+        <p>O módulo de <strong>Notas de Empenho</strong> é onde você cadastra os compromissos de compra firmados com os fornecedores antes da entrega física das mercadorias.</p>
+
+        <h3>Passo a Passo: Como Cadastrar uma Nova Nota de Empenho</h3>
+
+        <div class="step-container">
+            <div class="step-item">
+                <div class="step-number">1</div>
+                <div class="step-content">
+                    Acesse o menu <strong>Notas de Empenho</strong> e clique no botão azul <strong>"+ Novo Empenho"</strong> no canto superior direito.
+                </div>
+            </div>
+            <div class="step-item">
+                <div class="step-number">2</div>
+                <div class="step-content">
+                    <strong>Preencha os Dados Gerais:</strong>
+                    <ul>
+                        <li><strong>Nº da Nota de Empenho *:</strong> Código numérico oficial do empenho (não pode haver números duplicados).</li>
+                        <li><strong>Seletor de Licitação *:</strong> Selecione <em>Pregão Eletrônico</em> ou <em>ATA de Registro de Preço</em>.</li>
+                        <li><strong>Nº do Pregão ou ATA *:</strong> Identificador do edital (ex: <code>045/2026</code>).</li>
+                        <li><strong>Prazo (Data Limite de Entrega) *:</strong> Data prevista para o fornecedor entregar os itens.</li>
+                    </ul>
+                </div>
+            </div>
+            <div class="step-item">
+                <div class="step-number">3</div>
+                <div class="step-content">
+                    <strong>Preencha os Dados da Empresa Fornecedora:</strong>
+                    <ul>
+                        <li><strong>CNPJ *:</strong> Digite o CNPJ da empresa vencedora. <em>(Dica: se a empresa já tiver sido cadastrada anteriormente, seus dados como Razão Social e Endereço serão reaproveitados automaticamente).</em></li>
+                        <li><strong>Razão Social *:</strong> Nome completo da empresa.</li>
+                        <li><strong>Endereço e Telefone:</strong> Opcionais, úteis para contato de cobrança de entrega.</li>
+                    </ul>
+                </div>
+            </div>
+            <div class="step-item">
+                <div class="step-number">4</div>
+                <div class="step-content">
+                    <strong>Adicione os Itens da Nota:</strong>
+                    <p>Cada produto contratado é cadastrado em seu próprio bloco. Para inserir mais itens, clique no botão <strong>"+ Adicionar Item"</strong>.</p>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Campo</th>
+                                <th>Obrigatoriedade</th>
+                                <th>Orientações</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td><strong>Nome / Descrição</strong></td>
+                                <td><span class="badge badge-danger">Obrigatório</span></td>
+                                <td>Descrição clara e completa do material (ex: <em>Luva de Procedimento Látex Tam. M</em>).</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Natureza de Despesa</strong></td>
+                                <td>Opcional</td>
+                                <td>Classificação orçamentária do item (ex: Material de Consumo).</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Cód. Siafísico</strong></td>
+                                <td><span class="badge badge-danger">Obrigatório</span></td>
+                                <td>Código de catálogo oficial no Siafísico do Estado.</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Cód. Compras</strong></td>
+                                <td><span class="badge badge-danger">Obrigatório</span></td>
+                                <td>Código de compras institucional do produto.</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Quantidade</strong></td>
+                                <td><span class="badge badge-danger">Obrigatório</span></td>
+                                <td>Quantidade total autorizada para entrega nesta nota.</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Unidade de Medida</strong></td>
+                                <td><span class="badge badge-danger">Obrigatório</span></td>
+                                <td>Unidade, Caixa, Pacote, Frasco, Litro, etc.</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Perecível?</strong></td>
+                                <td><span class="badge badge-danger">Obrigatório</span></td>
+                                <td>Marque <em>Sim</em> para medicamentos, reagentes, luvas e perecíveis.</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Possui Garantia?</strong></td>
+                                <td>Opcional</td>
+                                <td>Marque a caixa de seleção se o produto conta com garantia do fabricante/fornecedor (ex: aparelhos, equipamentos, termômetros). <em>A data final da garantia será informada apenas no ato do recebimento!</em></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="step-item">
+                <div class="step-number">5</div>
+                <div class="step-content">
+                    Clique em <strong>"Salvar Nota de Empenho"</strong>.
+                </div>
+            </div>
+        </div>
+
+        <div class="alert-box alert-tip">
+            <strong>Dica de Operação:</strong> Na listagem de empenhos, clique em <strong>"Ver Detalhes"</strong> para consultar a qualquer momento todos os dados da nota, os itens contratados e a barra de progresso de recebimento (ex: <code>50 / 100 recebidos</code>).
+        </div>
+    </div>
+
+    <!-- RECEBIMENTO -->
+    <div class="chapter">
+        <h2>5. Recebimento e Entrada de Mercadorias</h2>
+        <p>O módulo de <strong>Recebimento</strong> é o ponto de entrada oficial das mercadorias no estoque físico do almoxarifado. O sistema permite dois tipos de entrada:</p>
+        <ol>
+            <li><strong>Recebimento por Nota de Empenho</strong> (compras normais com fornecedor).</li>
+            <li><strong>Recebimento por Doação</strong> (materiais doados por pessoas físicas ou jurídicas).</li>
+        </ol>
+
+        <h3>5.1 Recebimento via Nota de Empenho (NE)</h3>
+        <p>Utilize esta aba sempre que o fornecedor entregar materiais acompanhados da Nota Fiscal de faturamento.</p>
+
+        <div class="step-container">
+            <div class="step-item">
+                <div class="step-number">1</div>
+                <div class="step-content">
+                    Na tela de Recebimento, selecione a <strong>Nota de Empenho</strong> correspondente no menu suspenso. Os dados do fornecedor e a lista de itens pendentes serão carregados na tela.
+                </div>
+            </div>
+            <div class="step-item">
+                <div class="step-number">2</div>
+                <div class="step-content">
+                    <strong>Marque a caixinha de seleção (checkbox)</strong> na primeira coluna apenas dos itens que estão sendo entregues naquele momento.
+                </div>
+            </div>
+            <div class="step-item">
+                <div class="step-number">3</div>
+                <div class="step-content">
+                    <strong>Preencha os dados da entrega para cada item marcado:</strong>
+                    <ul>
+                        <li><strong>Qtd a Receber:</strong> O sistema sugere a quantidade pendente, mas você pode alterar caso a entrega seja parcial (ex: entregou 30 de 100).</li>
+                        <li><strong>Cód. Barras:</strong> Digite ou utilize o leitor de código de barras para bipar o código do produto na embalagem.</li>
+                        <li><strong>Nota Fiscal:</strong> Digite o número da NF que acompanha a carga (ao preencher na primeira linha, o sistema replica para as demais linhas marcadas).</li>
+                        <li><strong>Data de Entrega:</strong> Data em que a mercadoria está entrando no hospital.</li>
+                        <li><strong>Perecível e Data de Validade:</strong> Se for perecível, a data de validade do lote deve ser obrigatoriamente preenchida.</li>
+                        <li><strong>Garantia e Data da Garantia:</strong> Se o item tiver garantia marcada, informe a <strong>Data Limite da Garantia</strong> (calculada a partir da NF/entrega).</li>
+                    </ul>
+                </div>
+            </div>
+            <div class="step-item">
+                <div class="step-number">4</div>
+                <div class="step-content">
+                    Clique em <strong>"Salvar Recebimento (NE)"</strong>. O sistema dará entrada automática no estoque e atualizará o saldo recebido da Nota de Empenho.
+                </div>
+            </div>
+        </div>
+
+        <h3 style="margin-top: 6mm;">5.2 Recebimento via Doação</h3>
+        <p>Caso o hospital receba materiais em doação sem vínculo de empenho orçamentário:</p>
+        <div class="step-container">
+            <div class="step-item">
+                <div class="step-number">1</div>
+                <div class="step-content">Clique na aba <strong>"Por Doação"</strong>.</div>
+            </div>
+            <div class="step-item">
+                <div class="step-number">2</div>
+                <div class="step-content">Informe os dados do doador (CPF ou CNPJ, Nome/Razão Social e contato).</div>
+            </div>
+            <div class="step-item">
+                <div class="step-number">3</div>
+                <div class="step-content">Clique em <strong>"+ Adicionar Item"</strong> e preencha descrição, unidade, quantidade recebida, validade e garantia se aplicável.</div>
+            </div>
+            <div class="step-item">
+                <div class="step-number">4</div>
+                <div class="step-content">Clique em <strong>"Salvar Recebimento (Doação)"</strong>. Os itens entram imediatamente no estoque sob a categoria 'DOACAO'.</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- DISPENSAÇÃO -->
+    <div class="chapter">
+        <h2>6. Dispensação de Materiais para Setores</h2>
+        <p>A <strong>Dispensação</strong> é a rotina de baixa no estoque quando um material é entregue para um setor interno solicitante (Centro Consumidor).</p>
+
+        <h3>Como Realizar uma Dispensação Passo a Passo:</h3>
+
+        <div class="step-container">
+            <div class="step-item">
+                <div class="step-number">1</div>
+                <div class="step-content">
+                    Acesse o menu <strong>Dispensação</strong> no painel lateral.
+                </div>
+            </div>
+            <div class="step-item">
+                <div class="step-number">2</div>
+                <div class="step-content">
+                    <strong>Localizar o Produto:</strong>
+                    <p>No campo de busca, você pode:</p>
+                    <ul>
+                        <li><strong>Bipar o código de barras</strong> com o leitor óptico (o sistema busca instantaneamente o lote correspondente).</li>
+                        <li>Ou digitar parte do <strong>Nome do produto</strong>, <strong>Cód. Siafísico</strong> ou <strong>Cód. Compras</strong> e clicar em <em>Buscar</em>.</li>
+                    </ul>
+                </div>
+            </div>
+            <div class="step-item">
+                <div class="step-number">3</div>
+                <div class="step-content">
+                    <strong>Selecionar o Lote do Produto:</strong>
+                    <p>Nos resultados exibidos, clique no botão <strong>"Selecionar"</strong> do lote desejado. O sistema mostra o saldo atual em estoque, unidade e validade.</p>
+                </div>
+            </div>
+            <div class="step-item">
+                <div class="step-number">4</div>
+                <div class="step-content">
+                    <strong>Informar o Destino e a Quantidade:</strong>
+                    <ul>
+                        <li><strong>Centro Consumidor:</strong> Selecione o setor que está retirando o material (ex: <code>CC-008 Enfermagem</code>, <code>CC-009 Farmácia</code>, <code>CC-001 Ambulatório</code>).</li>
+                        <li><strong>Quantidade a Dispensar:</strong> Digite a quantidade entregue (o sistema impede saídas maiores que o saldo em estoque).</li>
+                    </ul>
+                </div>
+            </div>
+            <div class="step-item">
+                <div class="step-number">5</div>
+                <div class="step-content">
+                    Clique em <strong>"Confirmar Dispensação"</strong>. O saldo do produto é decrementado automaticamente no estoque e o registro é salvo no histórico.
+                </div>
+            </div>
+        </div>
+
+        <div class="alert-box alert-warning">
+            <strong>Regra de Dispensação de Perecíveis (FEFO):</strong> Quando houver mais de um lote do mesmo produto em estoque, priorize sempre a dispensação do lote com a **data de validade mais próxima** para evitar perdas hospitalares por vencimento.
+        </div>
+    </div>
+
+    <!-- CENTROS E CATEGORIAS -->
+    <div class="chapter">
+        <h2>7. Centros Consumidores e Categorias</h2>
+
+        <h3>7.1 Centros Consumidores</h3>
+        <p>Os <strong>Centros Consumidores</strong> representam as divisões, ambulatórios e setores do ILSL que consomem materiais.</p>
+        <ul>
+            <li>O sistema já vem pré-configurado com 25 centros essenciais em ordem alfabética (<code>CC-001 Ambulatório</code> até <code>CC-025 Unidade de Internação</code>).</li>
+            <li><strong>Cadastrar Novo Centro:</strong> Caso um novo setor seja criado no hospital, clique em <strong>"+ Novo Centro"</strong>, digite apenas o nome e salve. O sistema gerará o próximo código sequencial de forma 100% automática (ex: <code>CC-026</code>).</li>
+            <li><strong>Segurança:</strong> O sistema bloqueia a exclusão acidental de qualquer Centro Consumidor que já possua histórico de dispensações registradas.</li>
+        </ul>
+
+        <h3>7.2 Naturezas de Despesa</h3>
+        <p>Organizam os produtos em classificações contábeis e de suprimentos (ex: <em>Material de Consumo, Medicamentos, Higiene e Limpeza</em>). É possível adicionar novas categorias clicando em <strong>"+ Nova Categoria"</strong>.</p>
+    </div>
+
+    <!-- RELATÓRIOS E EXCEL -->
+    <div class="chapter">
+        <h2>8. Relatórios e Exportação para Excel</h2>
+        <p>O módulo de <strong>Relatórios</strong> permite extrair panoramas completos de estoque, auditorias de consumo por setor e prestação de contas, com suporte a impressão e geração de planilhas Excel nativas (<code>.xlsx</code>).</p>
+
+        <h3>Tipos de Relatórios Disponíveis:</h3>
+
+        <table>
+            <thead>
+                <tr>
+                    <th style="width: 25%;">Relatório</th>
+                    <th>O que exibe</th>
+                    <th style="width: 25%;">Exportação</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><strong>Estoque Total</strong></td>
+                    <td>Relação de todos os materiais cadastrados no almoxarifado, Cód. Siafísico, Cód. Compras, saldo atual e unidade de medida.</td>
+                    <td><span class="badge badge-success">Excel (.xlsx)</span> / Imprimir</td>
+                </tr>
+                <tr>
+                    <td><strong>Por Validade</strong></td>
+                    <td>Filtro de todos os produtos perecíveis ordenados pela data de validade mais próxima, com indicação visual de situação (<span class="badge badge-warning">Em Validade</span> vs <span class="badge badge-danger">Vencido</span>).</td>
+                    <td><span class="badge badge-success">Excel (.xlsx)</span> / Imprimir</td>
+                </tr>
+                <tr>
+                    <td><strong>Por Garantia</strong></td>
+                    <td>Lista de todos os equipamentos e materiais com garantia, data de término e situação (<span class="badge badge-success">Em Garantia</span> vs <span class="badge badge-danger">Garantia Vencida</span>).</td>
+                    <td><span class="badge badge-success">Excel (.xlsx)</span> / Imprimir</td>
+                </tr>
+                <tr>
+                    <td><strong>Histórico de Item</strong></td>
+                    <td>Rastreamento completo de entradas e saídas de um produto específico ao longo do tempo.</td>
+                    <td>Imprimir na tela</td>
+                </tr>
+                <tr>
+                    <td><strong>Por Fornecedor / Empresa</strong></td>
+                    <td>Relatório de itens entregues por uma determinada empresa ou pedidos em atraso contratual.</td>
+                    <td><span class="badge badge-success">Excel (.xlsx)</span> / Imprimir</td>
+                </tr>
+                <tr>
+                    <td><strong>Por Centro Consumidor</strong></td>
+                    <td>Histórico de tudo o que um determinado setor (ex: Farmácia, Nutrição) retirou do almoxarifado.</td>
+                    <td><span class="badge badge-success">Excel (.xlsx)</span> / Imprimir</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <h3>Como Exportar para Excel:</h3>
+        <ol>
+            <li>Selecione o relatório desejado (ex: <em>Estoque Total</em> ou <em>Por Garantia</em>).</li>
+            <li>Clique no botão azul <strong>"Gerar Relatório"</strong> para visualizar os dados na tela.</li>
+            <li>Clique no botão verde com ícone de planilha <strong>"Exportar Excel"</strong>. O arquivo <code>.xlsx</code> será baixado automaticamente pelo seu navegador pronto para abrir no Microsoft Excel ou LibreOffice.</li>
+        </ol>
+    </div>
+
+    <!-- DÚVIDAS E SUPORTE -->
+    <div class="chapter">
+        <h2>9. Dúvidas Frequentes e Boas Práticas</h2>
+
+        <h4>1. O que fazer se o leitor de código de barras não encontrar o produto na dispensação?</h4>
+        <p>Verifique se o código de barras foi cadastrado corretamente durante o recebimento do lote. Caso não encontre pelo código de barras, você pode buscar normalmente digitando o nome do produto ou seu código Siafísico/Compras.</p>
+
+        <h4>2. Um produto pode ter validade e garantia ao mesmo tempo?</h4>
+        <p><strong>Sim.</strong> O sistema trata perecibilidade e garantia como controles independentes. Um item pode ser perecível e simultaneamente possuir prazo de garantia técnica de fábrica.</p>
+
+        <h4>3. É obrigatório colocar Cód. Siafísico e Cód. Compras no empenho?</h4>
+        <p><strong>Sim.</strong> Ambos os códigos são de preenchimento obrigatório para todos os itens no momento do cadastro do empenho para garantir a conformidade com as diretrizes do Estado e da Instituição.</p>
+
+        <h4>4. Por que a aba "Usuários" não aparece no meu menu?</h4>
+        <p>A aba Usuários é restrita ao perfil <em>Administrador</em>. Caso necessite que um novo colega de equipe tenha acesso ao sistema ou precise resetar sua senha, solicite ao Administrador do sistema.</p>
+
+        <div class="footer-note">
+            SIGA-ILSL • Sistema Integrado de Gestão de Almoxarifado • Instituto Lauro de Souza Lima • Bauru/SP
+        </div>
+    </div>
+
+</body>
+</html>

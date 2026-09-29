@@ -327,4 +327,123 @@ router.get('/centro/:id/item', async (req, res) => {
     }
 });
 
+// GET /lote/rastreabilidade - Relatório de rastreabilidade Produto x Lote
+router.get('/lote/rastreabilidade', async (req, res) => {
+    try {
+        const { all } = getDb();
+        const { q, situacao } = req.query;
+        const queryTerm = (q || '').trim();
+        const searchPattern = `%${queryTerm}%`;
+        const filtroSituacao = situacao || 'todos';
+
+        let estoqueData = [];
+        let dispensadoData = [];
+
+        // Itens em estoque
+        if (filtroSituacao === 'todos' || filtroSituacao === 'estoque') {
+            const sqlEstoque = `
+                SELECT 
+                    e.id as estoque_id,
+                    e.descricao,
+                    e.codigo_siafisico,
+                    e.codigo_compras,
+                    e.codigo_barras,
+                    e.lote,
+                    e.quantidade_atual as quantidade,
+                    e.unidade,
+                    e.validade,
+                    'Em Estoque' as situacao,
+                    'Almoxarifado' as localizacao_destino,
+                    e.criado_em as data_registro,
+                    'Estoque Central' as operador
+                FROM estoque e
+                WHERE e.quantidade_atual > 0
+                  ${queryTerm ? `AND (
+                    e.lote ILIKE $1 OR 
+                    e.descricao ILIKE $1 OR 
+                    e.codigo_siafisico ILIKE $1 OR 
+                    e.codigo_compras ILIKE $1 OR 
+                    e.codigo_barras ILIKE $1
+                  )` : ''}
+                ORDER BY e.descricao ASC
+            `;
+            estoqueData = await all(sqlEstoque, queryTerm ? [searchPattern] : []);
+        }
+
+        // Itens dispensados (rastreabilidade de destino)
+        if (filtroSituacao === 'todos' || filtroSituacao === 'dispensado') {
+            const sqlDispensados = `
+                SELECT 
+                    d.id as dispensacao_id,
+                    e.descricao,
+                    e.codigo_siafisico,
+                    e.codigo_compras,
+                    e.codigo_barras,
+                    COALESCE(d.lote, e.lote) as lote,
+                    d.quantidade,
+                    e.unidade,
+                    e.validade,
+                    'Dispensado' as situacao,
+                    CONCAT(cc.codigo, ' - ', cc.nome) as localizacao_destino,
+                    d.criado_em as data_registro,
+                    u.nome as operador
+                FROM dispensacoes d
+                JOIN estoque e ON d.estoque_id = e.id
+                JOIN centros_consumidores cc ON d.centro_consumidor_id = cc.id
+                JOIN usuarios u ON d.usuario_id = u.id
+                ${queryTerm ? `WHERE (
+                    COALESCE(d.lote, e.lote) ILIKE $1 OR 
+                    e.descricao ILIKE $1 OR 
+                    e.codigo_siafisico ILIKE $1 OR 
+                    e.codigo_compras ILIKE $1 OR 
+                    e.codigo_barras ILIKE $1
+                )` : ''}
+                ORDER BY d.criado_em DESC
+            `;
+            dispensadoData = await all(sqlDispensados, queryTerm ? [searchPattern] : []);
+        }
+
+        let combined = [...estoqueData, ...dispensadoData].sort((a, b) => {
+            return new Date(b.data_registro || 0) - new Date(a.data_registro || 0);
+        });
+
+        if (req.query.export === 'excel') {
+            const exportData = combined.map(row => ({
+                situacao: row.situacao,
+                lote: row.lote || 'Sem Lote',
+                descricao: row.descricao,
+                codigo_siafisico: row.codigo_siafisico || '-',
+                codigo_compras: row.codigo_compras || '-',
+                quantidade: row.quantidade,
+                unidade: row.unidade || '',
+                validade: row.validade || '-',
+                localizacao_destino: row.localizacao_destino,
+                data_formatada: row.data_registro ? new Date(row.data_registro).toLocaleString('pt-BR') : '-',
+                operador: row.operador || '-'
+            }));
+
+            const columns = [
+                { header: 'Situação', key: 'situacao', width: 15 },
+                { header: 'Lote', key: 'lote', width: 20 },
+                { header: 'Descrição do Produto', key: 'descricao', width: 35 },
+                { header: 'Cód. Siafísico', key: 'codigo_siafisico', width: 15 },
+                { header: 'Cód. Compras', key: 'codigo_compras', width: 15 },
+                { header: 'Quantidade', key: 'quantidade', width: 12 },
+                { header: 'Unidade', key: 'unidade', width: 10 },
+                { header: 'Validade', key: 'validade', width: 12 },
+                { header: 'Localização / Destino', key: 'localizacao_destino', width: 30 },
+                { header: 'Data do Registro', key: 'data_formatada', width: 20 },
+                { header: 'Responsável', key: 'operador', width: 25 }
+            ];
+            await exportToExcel(res, exportData, columns, `rastreabilidade_lote_${Date.now()}`);
+        } else {
+            res.json(combined);
+        }
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ error: 'Erro ao gerar relatório de rastreabilidade de lote.' });
+    }
+});
+
 module.exports = router;
+

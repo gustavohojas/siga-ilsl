@@ -68,15 +68,19 @@ router.post('/empenho', async (req, res) => {
                     await tx.run('UPDATE itens_empenho SET garantia = TRUE, data_garantia = $1 WHERE id = $2', [garantiaFinal, item.item_empenho_id]);
                 }
 
+                // Lote do material
+                const loteFinal = item.lote && String(item.lote).trim() ? String(item.lote).trim() : null;
+
                 // Cria item_recebimento
                 const infoIR = await tx.run(`
-                    INSERT INTO itens_recebimento (recebimento_id, item_empenho_id, descricao, codigo_barras, perecivel, quantidade, unidade, validade, nota_fiscal, data_entrega, garantia, data_garantia)
-                    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+                    INSERT INTO itens_recebimento (recebimento_id, item_empenho_id, descricao, codigo_barras, lote, perecivel, quantidade, unidade, validade, nota_fiscal, data_entrega, garantia, data_garantia)
+                    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
                 `, [
                     recebimento_id,
                     item.item_empenho_id,
                     itemEmpenho.descricao,
                     item.codigo_barras || null,
+                    loteFinal,
                     isPerecivel,
                     item.quantidade,
                     itemEmpenho.unidade,
@@ -94,18 +98,20 @@ router.post('/empenho', async (req, res) => {
                     [item.quantidade, item.item_empenho_id]
                 );
 
-                // Verifica se já existe no estoque com mesma descrição/validade/código/garantia
+                // Verifica se já existe no estoque com mesma descrição/validade/código/garantia/lote
                 const estoqueExistente = await tx.get(`
                     SELECT id FROM estoque 
                     WHERE descricao = $1 
                     AND validade IS NOT DISTINCT FROM $2
                     AND codigo_barras IS NOT DISTINCT FROM $3
                     AND data_garantia IS NOT DISTINCT FROM $4
+                    AND lote IS NOT DISTINCT FROM $5
                 `, [
                     itemEmpenho.descricao, 
                     validadeFinal,
                     item.codigo_barras || null,
-                    garantiaFinal
+                    garantiaFinal,
+                    loteFinal
                 ]);
 
                 if (estoqueExistente) {
@@ -115,14 +121,15 @@ router.post('/empenho', async (req, res) => {
                     );
                 } else {
                     await tx.run(`
-                        INSERT INTO estoque (item_recebimento_id, codigo_siafisico, codigo_compras, descricao, codigo_barras, perecivel, unidade, quantidade_atual, validade, natureza_despesa, garantia, data_garantia)
-                        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+                        INSERT INTO estoque (item_recebimento_id, codigo_siafisico, codigo_compras, descricao, codigo_barras, lote, perecivel, unidade, quantidade_atual, validade, natureza_despesa, garantia, data_garantia)
+                        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
                     `, [
                         item_recebimento_id,
                         itemEmpenho.codigo_siafisico,
                         itemEmpenho.codigo_compras,
                         itemEmpenho.descricao,
                         item.codigo_barras || null,
+                        loteFinal,
                         isPerecivel,
                         itemEmpenho.unidade,
                         item.quantidade,
@@ -154,6 +161,10 @@ router.post('/doacao', async (req, res) => {
             return res.status(400).json({ error: 'Dados incompletos para recebimento de doação.' });
         }
 
+        if (!nota_fiscal || !String(nota_fiscal).trim()) {
+            return res.status(400).json({ error: 'Nota Fiscal é obrigatória para o recebimento de doação.' });
+        }
+
         const result = await transaction(async (tx) => {
             let doador_id;
             const doadorExistente = await tx.get('SELECT id FROM doadores WHERE cpf_cnpj = $1', [doador.cpf_cnpj]);
@@ -175,7 +186,7 @@ router.post('/doacao', async (req, res) => {
 
             const infoRecebimento = await tx.run(
                 'INSERT INTO recebimentos (tipo, doador_id, nota_fiscal, data_entrega) VALUES ($1, $2, $3, $4)', 
-                ['doacao', doador_id, nota_fiscal || null, data_entrega || null]
+                ['doacao', doador_id, String(nota_fiscal).trim(), data_entrega || null]
             );
             const recebimento_id = infoRecebimento.lastInsertRowid;
 
@@ -184,37 +195,41 @@ router.post('/doacao', async (req, res) => {
                 const validadeFinal = isPerecivel ? (item.validade || null) : null;
                 const isGarantia = Boolean(item.garantia);
                 const garantiaFinal = isGarantia ? (item.data_garantia || null) : null;
+                const loteFinal = item.lote && String(item.lote).trim() ? String(item.lote).trim() : null;
 
                 const infoIR = await tx.run(`
-                    INSERT INTO itens_recebimento (recebimento_id, descricao, codigo_barras, perecivel, quantidade, unidade, validade, nota_fiscal, data_entrega, garantia, data_garantia)
-                    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+                    INSERT INTO itens_recebimento (recebimento_id, descricao, codigo_barras, lote, perecivel, quantidade, unidade, validade, nota_fiscal, data_entrega, garantia, data_garantia)
+                    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
                 `, [
                     recebimento_id,
                     item.descricao,
                     item.codigo_barras || null,
+                    loteFinal,
                     isPerecivel,
                     item.quantidade,
                     item.unidade,
                     validadeFinal,
-                    nota_fiscal || null,
+                    String(nota_fiscal).trim(),
                     data_entrega || null,
                     isGarantia,
                     garantiaFinal
                 ]);
                 const item_recebimento_id = infoIR.lastInsertRowid;
 
-                // Verifica estoque existente considerando validade, código e garantia
+                // Verifica estoque existente considerando validade, código, garantia e lote
                 const estoqueExistente = await tx.get(`
                     SELECT id FROM estoque 
                     WHERE descricao = $1 
                     AND validade IS NOT DISTINCT FROM $2
                     AND codigo_barras IS NOT DISTINCT FROM $3
                     AND data_garantia IS NOT DISTINCT FROM $4
+                    AND lote IS NOT DISTINCT FROM $5
                 `, [
                     item.descricao, 
                     validadeFinal,
                     item.codigo_barras || null,
-                    garantiaFinal
+                    garantiaFinal,
+                    loteFinal
                 ]);
 
                 if (estoqueExistente) {
@@ -224,12 +239,13 @@ router.post('/doacao', async (req, res) => {
                     );
                 } else {
                     await tx.run(`
-                        INSERT INTO estoque (item_recebimento_id, descricao, codigo_barras, perecivel, unidade, quantidade_atual, validade, natureza_despesa, garantia, data_garantia)
-                        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+                        INSERT INTO estoque (item_recebimento_id, descricao, codigo_barras, lote, perecivel, unidade, quantidade_atual, validade, natureza_despesa, garantia, data_garantia)
+                        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
                     `, [
                         item_recebimento_id,
                         item.descricao,
                         item.codigo_barras || null,
+                        loteFinal,
                         isPerecivel,
                         item.unidade,
                         item.quantidade,
