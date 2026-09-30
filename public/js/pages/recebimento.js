@@ -1,5 +1,6 @@
 import { api } from '../api.js';
 import { showToast } from '../components/toast.js';
+import { playSuccessBeep } from '../utils/audio.js';
 
 export async function renderRecebimento(container) {
     container.innerHTML = `
@@ -260,7 +261,10 @@ export async function renderRecebimento(container) {
                             }
                         });
 
-                        // Auto-check ao escanear código de barras
+                        // Auto-check e beep ao escanear código de barras
+                        cod.addEventListener('change', () => {
+                            if (cod.value) playSuccessBeep();
+                        });
                         cod.addEventListener('input', () => {
                             if (cod.value && !check.checked) {
                                 check.click();
@@ -427,6 +431,10 @@ export async function renderRecebimento(container) {
             const garInput = div.querySelector('.d-data-gar');
             garInput.disabled = ev.target.value === 'Não';
             if (ev.target.value === 'Não') garInput.value = '';
+        });
+
+        div.querySelector('.d-cod').addEventListener('change', (ev) => {
+            if (ev.target.value) playSuccessBeep();
         });
 
         div.querySelector('.btn-remove-doacao').addEventListener('click', () => div.remove());

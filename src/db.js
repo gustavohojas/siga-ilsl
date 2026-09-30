@@ -202,8 +202,19 @@ async function initDb() {
             criado_em TIMESTAMP WITH TIME ZONE DEFAULT NOW()
         );
 
+        CREATE TABLE IF NOT EXISTS guias_dispensacao (
+            id SERIAL PRIMARY KEY,
+            codigo TEXT UNIQUE NOT NULL,
+            centro_consumidor_id INTEGER NOT NULL REFERENCES centros_consumidores(id),
+            usuario_id INTEGER NOT NULL REFERENCES usuarios(id),
+            observacoes TEXT,
+            pdf_conteudo BYTEA,
+            criado_em TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+        );
+
         CREATE TABLE IF NOT EXISTS dispensacoes (
             id SERIAL PRIMARY KEY,
+            guia_id INTEGER REFERENCES guias_dispensacao(id),
             estoque_id INTEGER NOT NULL REFERENCES estoque(id),
             centro_consumidor_id INTEGER NOT NULL REFERENCES centros_consumidores(id),
             quantidade NUMERIC NOT NULL,
@@ -230,6 +241,16 @@ async function initDb() {
         ALTER TABLE estoque ADD COLUMN IF NOT EXISTS data_garantia DATE;
         ALTER TABLE estoque ADD COLUMN IF NOT EXISTS lote TEXT;
         ALTER TABLE dispensacoes ADD COLUMN IF NOT EXISTS lote TEXT;
+        CREATE TABLE IF NOT EXISTS guias_dispensacao (
+            id SERIAL PRIMARY KEY,
+            codigo TEXT UNIQUE NOT NULL,
+            centro_consumidor_id INTEGER NOT NULL REFERENCES centros_consumidores(id),
+            usuario_id INTEGER NOT NULL REFERENCES usuarios(id),
+            observacoes TEXT,
+            pdf_conteudo BYTEA,
+            criado_em TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+        );
+        ALTER TABLE dispensacoes ADD COLUMN IF NOT EXISTS guia_id INTEGER REFERENCES guias_dispensacao(id);
     `);
 
     // 1. Carga Inicial do Administrador (executada apenas uma vez; se o usuário excluir futuramente, não recria)
