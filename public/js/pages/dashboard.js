@@ -141,7 +141,7 @@ export async function renderDashboard(container) {
                     `;
                 }).join('');
             } else {
-                validadeTableBody.innerHTML = `<tr><td colspan="3" class="text-center text-muted">Nenhum item perecível com validade próxima</td></tr>`;
+                validadeTableBody.innerHTML = `<tr><td colspan="3" class="text-center text-muted">Nenhum item perecível em estoque</td></tr>`;
             }
         }
 
@@ -167,7 +167,7 @@ export async function renderDashboard(container) {
                     `;
                 }).join('');
             } else {
-                garantiaTableBody.innerHTML = `<tr><td colspan="3" class="text-center text-muted">Nenhum item com garantia cadastrado</td></tr>`;
+                garantiaTableBody.innerHTML = `<tr><td colspan="3" class="text-center text-muted">Nenhum item com garantia em estoque</td></tr>`;
             }
         }
 
