@@ -12,6 +12,7 @@ export async function renderRelatorios(container) {
                     <button class="btn btn-secondary tab-btn" data-target="tab-empresa">Fornecedor / Empresa</button>
                     <button class="btn btn-secondary tab-btn" data-target="tab-centro">Centro Consumidor</button>
                     <button class="btn btn-secondary tab-btn" data-target="tab-lote"><i class="fas fa-barcode"></i> Rastreabilidade por Lote</button>
+                    <button class="btn btn-secondary tab-btn" data-target="tab-estornos"><i class="fas fa-undo-alt"></i> Auditoria de Estornos</button>
                 </div>
                 
                 <div class="card-body">
@@ -89,6 +90,26 @@ export async function renderRelatorios(container) {
                         </div>
                         <div id="relatorio-lote-content" style="overflow-x: auto;">
                             <p class="text-center text-muted">Informe o lote ou produto e clique em Gerar Relatório.</p>
+                        </div>
+                    </div>
+
+                    <!-- ESTORNOS TAB -->
+                    <div id="tab-estornos" class="tab-content" style="display: none;">
+                        <div style="display: flex; gap: 1rem; margin-bottom: 1rem; flex-wrap: wrap; align-items: center;">
+                            <input type="text" id="estornos-search-input" class="form-control" placeholder="Buscar por material, lote, NF, NE, fornecedor, justificativa..." style="max-width: 320px;">
+                            
+                            <select id="estornos-motivo-select" class="form-control" style="max-width: 220px;">
+                                <option value="todos">Todos os Motivos</option>
+                                <option value="erro_digitacao">Erro de Digitação</option>
+                                <option value="devolucao_fornecedor">Devolução ao Fornecedor</option>
+                            </select>
+                            
+                            <button class="btn btn-primary" id="btn-gerar-estornos">Gerar Relatório</button>
+                            <button class="btn btn-secondary btn-print"><i class="fas fa-print"></i> Imprimir</button>
+                            <button class="btn btn-secondary btn-excel" id="btn-excel-estornos" data-url=""><i class="fas fa-file-excel"></i> Exportar Excel</button>
+                        </div>
+                        <div id="relatorio-estornos-content" style="overflow-x: auto;">
+                            <p class="text-center text-muted">Selecione os filtros e clique em Gerar Relatório.</p>
                         </div>
                     </div>
 
@@ -449,5 +470,96 @@ export async function renderRelatorios(container) {
     btnGerarLote.addEventListener('click', gerarRelatorioLote);
     loteSearchInput.addEventListener('keypress', (e) => {
         if (e.key === 'Enter') gerarRelatorioLote();
+    });
+
+    // Auditoria de Estornos
+    const estornosSearchInput = document.getElementById('estornos-search-input');
+    const estornosMotivoSelect = document.getElementById('estornos-motivo-select');
+    const btnGerarEstornos = document.getElementById('btn-gerar-estornos');
+    const estornosContent = document.getElementById('relatorio-estornos-content');
+    const excelEstornos = document.getElementById('btn-excel-estornos');
+
+    const gerarRelatorioEstornos = async () => {
+        const q = estornosSearchInput.value.trim();
+        const motivo = estornosMotivoSelect.value;
+        const url = `/relatorios/estornos/auditoria?q=${encodeURIComponent(q)}&tipo_motivo=${motivo}`;
+        excelEstornos.setAttribute('data-url', url);
+
+        estornosContent.innerHTML = '<p class="text-center text-muted"><i class="fas fa-spinner fa-spin"></i> Carregando auditoria de estornos...</p>';
+
+        try {
+            const data = await api.get(url);
+            if (!data || data.length === 0) {
+                estornosContent.innerHTML = '<p class="text-center text-muted">Nenhum registro de estorno encontrado para estes filtros.</p>';
+                return;
+            }
+
+            let html = `
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>Data/Hora</th>
+                            <th>Responsável</th>
+                            <th>Motivo</th>
+                            <th>Material / Descrição</th>
+                            <th>Lote</th>
+                            <th>Qtd Estornada</th>
+                            <th>Origem (NE / NF)</th>
+                            <th>Fornecedor / Doador</th>
+                            <th>Justificativa por Extenso</th>
+                            <th style="text-align:center;">Guia</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+            `;
+
+            html += data.map(row => {
+                const isDevolucao = row.tipo_motivo === 'devolucao_fornecedor';
+                const motivoBadge = isDevolucao
+                    ? '<span class="badge badge-danger" style="font-size:0.8rem;"><i class="fas fa-truck-loading"></i> Devolução ao Fornecedor</span>'
+                    : '<span class="badge badge-warning" style="font-size:0.8rem;"><i class="fas fa-keyboard"></i> Erro de Digitação</span>';
+
+                const loteBadge = row.lote
+                    ? `<span style="font-family:monospace; background:rgba(59,130,246,0.15); color:#60a5fa; padding:2px 6px; border-radius:4px; font-weight:600; font-size:0.85rem;">${row.lote}</span>`
+                    : '<span style="color:var(--text-muted);">-</span>';
+
+                const dataFmt = row.data_estorno ? new Date(row.data_estorno).toLocaleString('pt-BR') : '-';
+                
+                const docOrigem = [
+                    row.numero_empenho ? `NE ${row.numero_empenho}` : null,
+                    row.nota_fiscal ? `NF ${row.nota_fiscal}` : null
+                ].filter(Boolean).join(' • ') || '-';
+
+                const guiaBtn = row.tem_pdf
+                    ? `<a href="/api/recebimentos/estornos/${row.id}/pdf" target="_blank" class="btn btn-secondary btn-sm" title="Visualizar Guia de Devolução" style="padding:4px 8px;"><i class="fas fa-file-pdf" style="color:#ef4444;"></i> Guia</a>`
+                    : '<span style="color:var(--text-muted);">-</span>';
+
+                return `
+                    <tr>
+                        <td style="white-space:nowrap;">${dataFmt}</td>
+                        <td><strong>${row.usuario_nome || '-'}</strong></td>
+                        <td>${motivoBadge}</td>
+                        <td><strong>${row.item_descricao || '-'}</strong></td>
+                        <td>${loteBadge}</td>
+                        <td><strong style="color:#ef4444;">${row.quantidade_estornada} ${row.unidade || ''}</strong></td>
+                        <td style="font-size:0.85rem;">${docOrigem}</td>
+                        <td style="font-size:0.85rem;">${row.fornecedor_doador || '-'}</td>
+                        <td style="max-width:250px; font-size:0.85rem; word-break:break-word;">${row.justificativa || '-'}</td>
+                        <td style="text-align:center;">${guiaBtn}</td>
+                    </tr>
+                `;
+            }).join('');
+
+            html += '</tbody></table>';
+            estornosContent.innerHTML = html;
+        } catch (error) {
+            console.error('Erro ao carregar auditoria de estornos:', error);
+            estornosContent.innerHTML = '<p class="text-danger text-center">Erro ao carregar relatório de auditoria de estornos.</p>';
+        }
+    };
+
+    btnGerarEstornos.addEventListener('click', gerarRelatorioEstornos);
+    estornosSearchInput.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') gerarRelatorioEstornos();
     });
 }

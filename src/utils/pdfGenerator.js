@@ -166,6 +166,149 @@ function gerarPdfGuiaDispensacao(guiaInfo) {
     });
 }
 
+/**
+ * Gera um Buffer de PDF oficial para Guia de Devolução ao Fornecedor.
+ * @param {Object} devInfo
+ * @returns {Promise<Buffer>}
+ */
+function gerarPdfGuiaDevolucao(devInfo) {
+    return new Promise((resolve, reject) => {
+        try {
+            const doc = new PDFDocument({
+                size: 'A4',
+                margin: 40,
+                info: {
+                    Title: `Guia de Devolução ${devInfo.codigo}`,
+                    Author: 'SIGA-ILSL',
+                    Subject: 'Comprovante de Devolução / Recusa ao Fornecedor'
+                }
+            });
+
+            const buffers = [];
+            doc.on('data', chunk => buffers.push(chunk));
+            doc.on('end', () => resolve(Buffer.concat(buffers)));
+            doc.on('error', err => reject(err));
+
+            const dangerColor = '#991b1b'; // Vermelho institucional formal para devoluções
+            const textColor = '#1f2937';
+            const lightBg = '#fef2f2';
+            const borderColor = '#f87171';
+
+            // --- CABEÇALHO ---
+            doc.rect(40, 40, 515, 60).fillAndStroke(lightBg, borderColor);
+
+            doc.fillColor(dangerColor)
+               .font('Helvetica-Bold')
+               .fontSize(13)
+               .text('INSTITUTO LAURO DE SOUZA LIMA', 50, 48, { align: 'center', width: 495 });
+
+            doc.fillColor('#4b5563')
+               .font('Helvetica')
+               .fontSize(8.5)
+               .text('SIGA-ILSL • Sistema Integrado de Gestão de Almoxarifado', 50, 66, { align: 'center', width: 495 });
+
+            doc.fillColor(dangerColor)
+               .font('Helvetica-Bold')
+               .fontSize(11)
+               .text('GUIA DE DEVOLUÇÃO AO FORNECEDOR / RECUSA TÉCNICA', 50, 80, { align: 'center', width: 495 });
+
+            // --- METADADOS ---
+            let y = 112;
+            doc.rect(40, y, 515, 80).stroke('#d1d5db');
+
+            doc.fillColor(textColor).font('Helvetica-Bold').fontSize(8.5);
+            doc.text('Protocolo / Guia:', 50, y + 8);
+            doc.font('Helvetica').text(devInfo.codigo, 140, y + 8);
+
+            doc.font('Helvetica-Bold').text('Data / Horário:', 330, y + 8);
+            doc.font('Helvetica').text(devInfo.dataHora, 410, y + 8);
+
+            doc.font('Helvetica-Bold').text('Fornecedor / Razão:', 50, y + 25);
+            doc.font('Helvetica').text(devInfo.fornecedor || 'Fornecedor Externo', 140, y + 25);
+
+            doc.font('Helvetica-Bold').text('CNPJ:', 330, y + 25);
+            doc.font('Helvetica').text(devInfo.cnpj || '-', 410, y + 25);
+
+            doc.font('Helvetica-Bold').text('Nota Fiscal de Entrada:', 50, y + 42);
+            doc.font('Helvetica').text(devInfo.notaFiscal || '-', 150, y + 42);
+
+            doc.font('Helvetica-Bold').text('Nota de Empenho (NE):', 330, y + 42);
+            doc.font('Helvetica').text(devInfo.empenho || '-', 435, y + 42);
+
+            doc.font('Helvetica-Bold').text('Registrado por:', 50, y + 59);
+            doc.font('Helvetica').text(devInfo.usuarioNome || '-', 140, y + 59);
+
+            y += 92;
+
+            // --- JUSTIFICATIVA / MOTIVO ---
+            doc.rect(40, y, 515, 65).fillAndStroke('#fff7ed', '#fdba74');
+            doc.fillColor('#9a3412').font('Helvetica-Bold').fontSize(9);
+            doc.text('MOTIVO E JUSTIFICATIVA DA DEVOLUÇÃO / RECUSA:', 50, y + 8);
+            
+            doc.fillColor('#431407').font('Helvetica').fontSize(8.5);
+            doc.text(devInfo.justificativa, 50, y + 24, { width: 495, height: 35, ellipsis: true });
+
+            y += 78;
+
+            // --- TABELA DO ITEM DEVOLVIDO ---
+            doc.fillColor(dangerColor).font('Helvetica-Bold').fontSize(9.5);
+            doc.text('MATERIAL RECUSADO / DEVOLVIDO', 40, y);
+            y += 14;
+
+            // Header tabela
+            doc.rect(40, y, 515, 20).fill(dangerColor);
+            doc.fillColor('#ffffff').font('Helvetica-Bold').fontSize(8);
+            doc.text('DESCRIÇÃO DO MATERIAL', 50, y + 6, { width: 220 });
+            doc.text('LOTE', 280, y + 6, { width: 70 });
+            doc.text('VALIDADE', 360, y + 6, { width: 60 });
+            doc.text('QTD DEVOLVIDA', 430, y + 6, { width: 65, align: 'right' });
+            doc.text('UN', 510, y + 6, { width: 35 });
+            y += 20;
+
+            doc.rect(40, y, 515, 24).fillAndStroke('#ffffff', '#d1d5db');
+            doc.fillColor(textColor).font('Helvetica-Bold').fontSize(8.5);
+            doc.text(devInfo.itemDescricao, 50, y + 7, { width: 220, ellipsis: true });
+            doc.font('Helvetica');
+            doc.text(devInfo.lote || '-', 280, y + 7, { width: 70 });
+            doc.text(devInfo.validade || '-', 360, y + 7, { width: 60 });
+            doc.font('Helvetica-Bold').fillColor(dangerColor);
+            doc.text(String(devInfo.quantidade), 430, y + 7, { width: 65, align: 'right' });
+            doc.fillColor(textColor).font('Helvetica');
+            doc.text(devInfo.unidade || '', 510, y + 7, { width: 35 });
+
+            y += 50;
+
+            // --- RODAPÉ DE ASSINATURAS ---
+            y = Math.max(y + 20, 680);
+
+            doc.rect(40, y, 245, 105).stroke('#d1d5db');
+            doc.rect(310, y, 245, 105).stroke('#d1d5db');
+
+            // ILSL
+            doc.fillColor(dangerColor).font('Helvetica-Bold').fontSize(8.5);
+            doc.text('EXPEDIDO POR (ALMOXARIFADO - ILSL)', 50, y + 8);
+            doc.fillColor(textColor).font('Helvetica').fontSize(8);
+            doc.text(`Responsável: ${devInfo.usuarioNome}`, 50, y + 25);
+            doc.text('Assinatura: _______________________________', 50, y + 65);
+            doc.text('Data: ____/____/________', 50, y + 85);
+
+            // Transportador / Fornecedor
+            doc.fillColor(dangerColor).font('Helvetica-Bold').fontSize(8.5);
+            doc.text('RECEBIDO POR (TRANSPORTADORA / FORNECEDOR)', 320, y + 8);
+            doc.fillColor(textColor).font('Helvetica').fontSize(8);
+            doc.text('Nome Legível: ____________________________', 320, y + 25);
+            doc.text('RG / CPF: ________________________________', 320, y + 45);
+            doc.text('Assinatura: _______________________________', 320, y + 65);
+            doc.text('Data: ____/____/________', 320, y + 85);
+
+            doc.end();
+        } catch (error) {
+            reject(error);
+        }
+    });
+}
+
 module.exports = {
-    gerarPdfGuiaDispensacao
+    gerarPdfGuiaDispensacao,
+    gerarPdfGuiaDevolucao
 };

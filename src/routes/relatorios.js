@@ -445,5 +445,106 @@ router.get('/lote/rastreabilidade', async (req, res) => {
     }
 });
 
+// GET /estornos/auditoria - Relatório de Auditoria de Estornos e Devoluções
+router.get('/estornos/auditoria', async (req, res) => {
+    try {
+        const { all } = getDb();
+        const { q, motivo } = req.query;
+        const queryTerm = (q || '').trim();
+        const filtroMotivo = motivo || 'todos';
+
+        let sql = `
+            SELECT 
+                est.id,
+                est.criado_em as data_estorno,
+                u.nome as usuario_nome,
+                est.tipo_motivo,
+                est.quantidade as quantidade_estornada,
+                est.justificativa,
+                ir.descricao as item_descricao,
+                ir.lote,
+                ir.validade,
+                ir.unidade,
+                r.tipo as tipo_origem,
+                r.nota_fiscal,
+                ne.numero as numero_empenho,
+                COALESCE(emp.razao_social, d.nome_razao_social) as fornecedor_doador,
+                CASE WHEN est.pdf_conteudo IS NOT NULL THEN TRUE ELSE FALSE END as tem_pdf
+            FROM estornos_recebimento est
+            JOIN itens_recebimento ir ON est.item_recebimento_id = ir.id
+            JOIN recebimentos r ON ir.recebimento_id = r.id
+            JOIN usuarios u ON est.usuario_id = u.id
+            LEFT JOIN notas_empenho ne ON r.nota_empenho_id = ne.id
+            LEFT JOIN empresas emp ON ne.empresa_id = emp.id
+            LEFT JOIN doadores d ON r.doador_id = d.id
+            WHERE 1=1
+        `;
+
+        const params = [];
+
+        if (filtroMotivo !== 'todos') {
+            params.push(filtroMotivo);
+            sql += ` AND est.tipo_motivo = $${params.length}`;
+        }
+
+        if (queryTerm) {
+            params.push(`%${queryTerm}%`);
+            const pIdx = params.length;
+            sql += ` AND (
+                ir.descricao ILIKE $${pIdx} OR 
+                ir.lote ILIKE $${pIdx} OR 
+                est.justificativa ILIKE $${pIdx} OR 
+                u.nome ILIKE $${pIdx} OR
+                COALESCE(emp.razao_social, d.nome_razao_social) ILIKE $${pIdx} OR
+                ne.numero ILIKE $${pIdx} OR
+                r.nota_fiscal ILIKE $${pIdx}
+            )`;
+        }
+
+        sql += ' ORDER BY est.criado_em DESC';
+
+        const data = await all(sql, params);
+
+        if (req.query.export === 'excel') {
+            const exportData = data.map(row => ({
+                id: row.id,
+                data: row.data_estorno ? new Date(row.data_estorno).toLocaleString('pt-BR') : '-',
+                usuario: row.usuario_nome,
+                motivo: row.tipo_motivo === 'erro_digitacao' ? 'Erro de Digitação' : 'Devolução ao Fornecedor',
+                item: row.item_descricao,
+                lote: row.lote || '-',
+                quantidade: row.quantidade_estornada,
+                unidade: row.unidade || '',
+                empenho: row.numero_empenho || '-',
+                nota_fiscal: row.nota_fiscal || '-',
+                fornecedor: row.fornecedor_doador || '-',
+                justificativa: row.justificativa
+            }));
+
+            const columns = [
+                { header: 'ID', key: 'id', width: 8 },
+                { header: 'Data/Hora', key: 'data', width: 20 },
+                { header: 'Responsável', key: 'usuario', width: 25 },
+                { header: 'Tipo de Motivo', key: 'motivo', width: 25 },
+                { header: 'Item / Material', key: 'item', width: 35 },
+                { header: 'Lote', key: 'lote', width: 18 },
+                { header: 'Qtd Estornada', key: 'quantidade', width: 15 },
+                { header: 'Unidade', key: 'unidade', width: 10 },
+                { header: 'Nº Empenho', key: 'empenho', width: 18 },
+                { header: 'Nota Fiscal', key: 'nota_fiscal', width: 18 },
+                { header: 'Fornecedor / Doador', key: 'fornecedor', width: 30 },
+                { header: 'Justificativa por Extenso', key: 'justificativa', width: 50 }
+            ];
+            await exportToExcel(res, exportData, columns, `auditoria_estornos_${Date.now()}`);
+        } else {
+            res.json(data);
+        }
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ error: 'Erro ao gerar relatório de auditoria de estornos.' });
+    }
+});
+
 module.exports = router;
+
 

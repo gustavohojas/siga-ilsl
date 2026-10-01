@@ -8,9 +8,10 @@ export async function renderRecebimento(container) {
             <h2 class="mb-4">Recebimento de Materiais</h2>
             
             <div class="card mb-4">
-                <div class="card-header" style="display:flex; gap:1rem;">
+                <div class="card-header" style="display:flex; gap:1rem; flex-wrap:wrap;">
                     <button class="btn btn-primary" id="tab-ne">Via Empenho</button>
                     <button class="btn btn-outline" id="tab-doacao">Via Doação</button>
+                    <button class="btn btn-outline" id="tab-historico"><i class="fas fa-history"></i> Histórico & Estornos</button>
                 </div>
                 
                 <div class="card-body" id="view-ne">
@@ -108,14 +109,120 @@ export async function renderRecebimento(container) {
                         </div>
                     </form>
                 </div>
+
+                <!-- VIEW HISTÓRICO & ESTORNOS -->
+                <div class="card-body" id="view-historico" style="display: none;">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem; flex-wrap:wrap; gap:1rem;">
+                        <input type="text" id="historico-search" class="form-control" placeholder="Buscar por material, lote, NF, NE, fornecedor..." style="max-width:380px;">
+                        <button class="btn btn-secondary btn-sm" id="btn-refresh-historico"><i class="fas fa-sync-alt"></i> Atualizar</button>
+                    </div>
+                    <div style="overflow-x: auto;">
+                        <table class="table" id="table-historico-rec">
+                            <thead>
+                                <tr>
+                                    <th>Data</th>
+                                    <th>Origem</th>
+                                    <th>NF / NE</th>
+                                    <th>Material / Descrição</th>
+                                    <th>Lote</th>
+                                    <th>Validade</th>
+                                    <th>Qtd Recebida</th>
+                                    <th>Saldo Estoque</th>
+                                    <th>Já Estornado</th>
+                                    <th style="text-align:center;">Ação</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr><td colspan="10" class="text-center">Carregando histórico...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+
+        <!-- MODAL DE ESTORNO / DEVOLUÇÃO -->
+        <div id="modal-estorno" class="modal" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.65); z-index: 200; align-items: center; justify-content: center;">
+            <div class="modal-content" style="background: var(--bg-card); padding: 2rem; border-radius: 8px; width: 90%; max-width: 580px; box-shadow: 0 10px 25px rgba(0,0,0,0.5);">
+                <h3 style="margin-bottom: 0.5rem;"><i class="fas fa-undo-alt"></i> Estorno / Devolução de Material</h3>
+                <p id="estorno-item-desc" style="color: var(--text-muted); margin-bottom: 1rem; font-size: 0.95rem;"></p>
+
+                <div style="background: rgba(255,255,255,0.03); border: 1px solid var(--border-glass); border-radius: 6px; padding: 0.85rem; margin-bottom: 1.25rem; font-size: 0.88rem;">
+                    <div style="display:flex; justify-content:space-between; margin-bottom:0.25rem;">
+                        <span>Qtd Original Recebida:</span>
+                        <strong id="estorno-qtd-original">0</strong>
+                    </div>
+                    <div style="display:flex; justify-content:space-between; margin-bottom:0.25rem;">
+                        <span>Saldo Atual Disponível em Estoque:</span>
+                        <strong id="estorno-saldo-atual" style="color:#60a5fa;">0</strong>
+                    </div>
+                    <div style="display:flex; justify-content:space-between;">
+                        <span>Já Estornado Anteriormente:</span>
+                        <strong id="estorno-ja-estornado" style="color:#f59e0b;">0</strong>
+                    </div>
+                </div>
+
+                <form id="form-estorno">
+                    <input type="hidden" id="estorno-item-id">
+                    
+                    <div class="form-group">
+                        <label class="form-label" for="estorno-qtd"><strong>Quantidade a Estornar *</strong></label>
+                        <input type="number" id="estorno-qtd" class="form-control" required min="1" step="any" style="font-size: 1.05rem; font-weight:600;">
+                        <small class="text-muted">Limite máximo: saldo disponível em estoque deste lote.</small>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label"><strong>Tipo de Motivo *</strong></label>
+                        <div style="display:flex; flex-direction:column; gap:0.5rem; margin-top:0.25rem;">
+                            <label style="display:flex; align-items:center; gap:0.5rem; cursor:pointer;">
+                                <input type="radio" name="estorno-motivo" value="erro_digitacao" checked>
+                                <span><strong>Erro de Digitação</strong> (retificação de quantidade lançada incorretamente)</span>
+                            </label>
+                            <label style="display:flex; align-items:center; gap:0.5rem; cursor:pointer;">
+                                <input type="radio" name="estorno-motivo" value="devolucao_fornecedor">
+                                <span><strong>Devolução ao Fornecedor</strong> (recusa técnica, avaria ou fora do padrão do edital)</span>
+                            </label>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label" for="estorno-justificativa"><strong>Justificativa por Extenso *</strong></label>
+                        <textarea id="estorno-justificativa" class="form-control" rows="3" required placeholder="Explique detalhadamente o motivo deste estorno para fins de auditoria..."></textarea>
+                    </div>
+
+                    <div style="display: flex; justify-content: flex-end; gap: 1rem; margin-top: 1.5rem;">
+                        <button type="button" class="btn btn-secondary" id="btn-cancelar-estorno">Cancelar</button>
+                        <button type="submit" class="btn btn-danger" id="btn-confirmar-estorno">Confirmar Estorno</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- MODAL DE SUCESSO DO ESTORNO COM BOTÃO OPCIONAL DE GUIA -->
+        <div id="modal-sucesso-estorno" class="modal" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.65); z-index: 210; align-items: center; justify-content: center;">
+            <div class="modal-content" style="background: var(--bg-card); padding: 2rem; border-radius: 8px; width: 90%; max-width: 500px; text-align: center;">
+                <div style="width: 55px; height: 55px; background: rgba(16,185,129,0.15); color: #10b981; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 1.6rem; margin: 0 auto 1rem;">
+                    <i class="fas fa-check"></i>
+                </div>
+                <h3 style="margin-bottom: 0.5rem; color: #10b981;">Estorno Realizado com Sucesso!</h3>
+                <p id="sucesso-estorno-msg" style="color: var(--text-muted); margin-bottom: 1.5rem; font-size: 0.95rem;"></p>
+                <div id="sucesso-guia-wrapper" style="display:none; margin-bottom: 1rem;">
+                    <a id="btn-abrir-guia-devolucao" href="#" target="_blank" class="btn btn-primary" style="width:100%; padding:0.75rem;">
+                        <i class="fas fa-file-pdf"></i> Imprimir Guia de Devolução ao Fornecedor (Opcional)
+                    </a>
+                </div>
+                <button type="button" class="btn btn-secondary" id="btn-fechar-sucesso-estorno" style="width:100%;">Fechar</button>
             </div>
         </div>
     `;
 
     const tabNe = document.getElementById('tab-ne');
     const tabDoacao = document.getElementById('tab-doacao');
+    const tabHistorico = document.getElementById('tab-historico');
     const viewNe = document.getElementById('view-ne');
     const viewDoacao = document.getElementById('view-doacao');
+    const viewHistorico = document.getElementById('view-historico');
     const selectNe = document.getElementById('select-ne');
     const neDetails = document.getElementById('ne-details');
     const empresaInfo = document.getElementById('empresa-info');
@@ -124,15 +231,29 @@ export async function renderRecebimento(container) {
     tabNe.addEventListener('click', () => {
         tabNe.className = 'btn btn-primary';
         tabDoacao.className = 'btn btn-outline';
+        tabHistorico.className = 'btn btn-outline';
         viewNe.style.display = 'block';
         viewDoacao.style.display = 'none';
+        viewHistorico.style.display = 'none';
     });
 
     tabDoacao.addEventListener('click', () => {
         tabDoacao.className = 'btn btn-primary';
         tabNe.className = 'btn btn-outline';
+        tabHistorico.className = 'btn btn-outline';
         viewDoacao.style.display = 'block';
         viewNe.style.display = 'none';
+        viewHistorico.style.display = 'none';
+    });
+
+    tabHistorico.addEventListener('click', () => {
+        tabHistorico.className = 'btn btn-primary';
+        tabNe.className = 'btn btn-outline';
+        tabDoacao.className = 'btn btn-outline';
+        viewHistorico.style.display = 'block';
+        viewNe.style.display = 'none';
+        viewDoacao.style.display = 'none';
+        loadHistorico();
     });
 
     // Carregar empenhos no select
@@ -538,4 +659,224 @@ export async function renderRecebimento(container) {
     // Carregar empenhos e adicionar um item de doação inicial
     loadEmpenhos();
     createDoacaoItem();
+
+    // ==========================================
+    // HISTÓRICO DE RECEBIMENTOS & ESTORNOS
+    // ==========================================
+    let historicoData = [];
+    const tableHistoricoBody = document.querySelector('#table-historico-rec tbody');
+    const historicoSearch = document.getElementById('historico-search');
+    const btnRefreshHistorico = document.getElementById('btn-refresh-historico');
+
+    // Modais de Estorno
+    const modalEstorno = document.getElementById('modal-estorno');
+    const formEstorno = document.getElementById('form-estorno');
+    const btnCancelarEstorno = document.getElementById('btn-cancelar-estorno');
+    const btnConfirmarEstorno = document.getElementById('btn-confirmar-estorno');
+    const modalSucessoEstorno = document.getElementById('modal-sucesso-estorno');
+    const btnFecharSucessoEstorno = document.getElementById('btn-fechar-sucesso-estorno');
+    const sucessoGuiaWrapper = document.getElementById('sucesso-guia-wrapper');
+    const btnAbrirGuiaDevolucao = document.getElementById('btn-abrir-guia-devolucao');
+
+    const renderHistoricoTabela = (lista) => {
+        if (!lista || lista.length === 0) {
+            tableHistoricoBody.innerHTML = '<tr><td colspan="10" class="text-center text-muted" style="padding: 1.5rem;">Nenhum recebimento encontrado.</td></tr>';
+            return;
+        }
+
+        tableHistoricoBody.innerHTML = lista.map(item => {
+            const dataFmt = item.data_entrega ? new Date(item.data_entrega).toLocaleDateString('pt-BR') : (item.criado_em ? new Date(item.criado_em).toLocaleDateString('pt-BR') : '-');
+            const origemBadge = item.origem === 'empenho' 
+                ? '<span class="badge badge-primary" style="font-size:0.75rem;">Empenho</span>'
+                : '<span class="badge badge-info" style="font-size:0.75rem;">Doação</span>';
+            const loteBadge = item.lote 
+                ? `<span style="font-family:monospace; background:rgba(59,130,246,0.15); color:#60a5fa; padding:2px 6px; border-radius:4px; font-weight:600; font-size:0.85rem;">${item.lote}</span>` 
+                : '<span style="color:var(--text-muted);">-</span>';
+            const validadeFmt = item.validade ? new Date(item.validade).toLocaleDateString('pt-BR') : '-';
+            
+            const saldoAtual = Number(item.saldo_estoque_atual || 0);
+            const totalRec = Number(item.quantidade_recebida || 0);
+            const jaEstornado = Number(item.total_estornado || 0);
+            const podeEstornar = saldoAtual > 0 && (totalRec - jaEstornado) > 0;
+
+            const nfNe = item.origem === 'empenho'
+                ? `<div><strong>NE:</strong> ${item.numero_empenho || '-'}</div><div style="font-size:0.8rem; color:var(--text-muted);">NF: ${item.nota_fiscal || '-'}</div>`
+                : `<div><strong>NF:</strong> ${item.nota_fiscal || '-'}</div>`;
+
+            const saldoColor = saldoAtual > 0 ? '#10b981' : 'var(--text-muted)';
+            const estornadoTxt = jaEstornado > 0 
+                ? `<span style="color:#f59e0b; font-weight:600;">${jaEstornado} ${item.unidade || ''}</span>`
+                : '<span style="color:var(--text-muted);">-</span>';
+
+            const acaoBtn = podeEstornar
+                ? `<button class="btn btn-warning btn-sm btn-abrir-estorno" data-id="${item.id}" style="padding:4px 8px; font-size:0.8rem; white-space:nowrap;"><i class="fas fa-undo-alt"></i> Estornar</button>`
+                : `<span class="badge badge-secondary" style="font-size:0.75rem;" title="Item sem saldo em estoque para estorno">Indisponível</span>`;
+
+            return `
+                <tr>
+                    <td style="white-space:nowrap;">${dataFmt}</td>
+                    <td>${origemBadge}</td>
+                    <td>${nfNe}</td>
+                    <td>
+                        <strong>${item.descricao}</strong>
+                        <div style="font-size:0.8rem; color:var(--text-muted);">${item.fornecedor_nome || ''}</div>
+                    </td>
+                    <td>${loteBadge}</td>
+                    <td style="white-space:nowrap;">${validadeFmt}</td>
+                    <td><strong>${totalRec} ${item.unidade || ''}</strong></td>
+                    <td><strong style="color:${saldoColor};">${saldoAtual} ${item.unidade || ''}</strong></td>
+                    <td>${estornadoTxt}</td>
+                    <td style="text-align:center;">${acaoBtn}</td>
+                </tr>
+            `;
+        }).join('');
+
+        // Listeners nos botões de Estornar
+        document.querySelectorAll('.btn-abrir-estorno').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const id = parseInt(btn.getAttribute('data-id'));
+                abrirModalEstorno(id);
+            });
+        });
+    };
+
+    const loadHistorico = async () => {
+        tableHistoricoBody.innerHTML = '<tr><td colspan="10" class="text-center" style="padding:1.5rem;"><i class="fas fa-spinner fa-spin"></i> Carregando histórico...</td></tr>';
+        try {
+            const data = await api.get('/recebimentos/historico');
+            historicoData = Array.isArray(data) ? data : [];
+            filtrarHistorico();
+        } catch (error) {
+            console.error('Erro ao carregar histórico:', error);
+            tableHistoricoBody.innerHTML = '<tr><td colspan="10" class="text-center text-danger" style="padding:1.5rem;">Erro ao carregar histórico de recebimentos.</td></tr>';
+            showToast({ message: 'Erro ao carregar histórico.', type: 'error' });
+        }
+    };
+
+    const filtrarHistorico = () => {
+        const termo = (historicoSearch.value || '').trim().toLowerCase();
+        if (!termo) {
+            renderHistoricoTabela(historicoData);
+            return;
+        }
+        const filtrados = historicoData.filter(item => {
+            const desc = (item.descricao || '').toLowerCase();
+            const lote = (item.lote || '').toLowerCase();
+            const nf = (item.nota_fiscal || '').toLowerCase();
+            const ne = (item.numero_empenho || '').toLowerCase();
+            const forn = (item.fornecedor_nome || '').toLowerCase();
+            return desc.includes(termo) || lote.includes(termo) || nf.includes(termo) || ne.includes(termo) || forn.includes(termo);
+        });
+        renderHistoricoTabela(filtrados);
+    };
+
+    historicoSearch.addEventListener('input', filtrarHistorico);
+    btnRefreshHistorico.addEventListener('click', loadHistorico);
+
+    let itemParaEstorno = null;
+
+    const abrirModalEstorno = (itemId) => {
+        itemParaEstorno = historicoData.find(i => i.id === itemId);
+        if (!itemParaEstorno) return;
+
+        const saldo = Number(itemParaEstorno.saldo_estoque_atual || 0);
+        const original = Number(itemParaEstorno.quantidade_recebida || 0);
+        const jaEstornado = Number(itemParaEstorno.total_estornado || 0);
+        const maxEstorno = Math.min(saldo, original - jaEstornado);
+
+        document.getElementById('estorno-item-id').value = itemParaEstorno.id;
+        document.getElementById('estorno-item-desc').textContent = `${itemParaEstorno.descricao} (${itemParaEstorno.unidade || 'UN'}) ${itemParaEstorno.lote ? ' • Lote: ' + itemParaEstorno.lote : ''}`;
+        document.getElementById('estorno-qtd-original').textContent = `${original} ${itemParaEstorno.unidade || ''}`;
+        document.getElementById('estorno-saldo-atual').textContent = `${saldo} ${itemParaEstorno.unidade || ''}`;
+        document.getElementById('estorno-ja-estornado').textContent = `${jaEstornado} ${itemParaEstorno.unidade || ''}`;
+
+        const inputQtd = document.getElementById('estorno-qtd');
+        inputQtd.value = '';
+        inputQtd.max = maxEstorno;
+        inputQtd.placeholder = `Máximo: ${maxEstorno}`;
+
+        // Reset radio para erro_digitacao por padrão
+        const radioErro = document.querySelector('input[name="estorno-motivo"][value="erro_digitacao"]');
+        if (radioErro) radioErro.checked = true;
+
+        document.getElementById('estorno-justificativa').value = '';
+
+        modalEstorno.style.display = 'flex';
+    };
+
+    const fecharModalEstorno = () => {
+        modalEstorno.style.display = 'none';
+        itemParaEstorno = null;
+    };
+
+    btnCancelarEstorno.addEventListener('click', fecharModalEstorno);
+
+    formEstorno.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        if (!itemParaEstorno) return;
+
+        const qtd = parseFloat(document.getElementById('estorno-qtd').value);
+        const motivo = document.querySelector('input[name="estorno-motivo"]:checked')?.value;
+        const justificativa = document.getElementById('estorno-justificativa').value.trim();
+
+        const saldo = Number(itemParaEstorno.saldo_estoque_atual || 0);
+        const original = Number(itemParaEstorno.quantidade_recebida || 0);
+        const jaEstornado = Number(itemParaEstorno.total_estornado || 0);
+        const maxEstorno = Math.min(saldo, original - jaEstornado);
+
+        if (!qtd || qtd <= 0) {
+            showToast({ message: 'Informe uma quantidade válida para o estorno.', type: 'warning' });
+            return;
+        }
+
+        if (qtd > maxEstorno) {
+            showToast({ message: `A quantidade informada (${qtd}) ultrapassa o limite permitido (${maxEstorno}).`, type: 'warning' });
+            return;
+        }
+
+        if (!justificativa || justificativa.length < 5) {
+            showToast({ message: 'A justificativa por extenso é obrigatória (mínimo de 5 caracteres).', type: 'warning' });
+            return;
+        }
+
+        btnConfirmarEstorno.disabled = true;
+        btnConfirmarEstorno.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processando...';
+
+        try {
+            const payload = {
+                item_recebimento_id: itemParaEstorno.id,
+                quantidade: qtd,
+                tipo_motivo: motivo,
+                justificativa: justificativa
+            };
+
+            const result = await api.post('/recebimentos/estorno', payload);
+
+            fecharModalEstorno();
+
+            // Exibir modal de sucesso
+            document.getElementById('sucesso-estorno-msg').textContent = result.mensagem || 'Estorno concluído com sucesso!';
+            
+            if (result.guia_devolucao_id) {
+                sucessoGuiaWrapper.style.display = 'block';
+                btnAbrirGuiaDevolucao.href = `/api/recebimentos/estornos/${result.guia_devolucao_id}/pdf`;
+            } else {
+                sucessoGuiaWrapper.style.display = 'none';
+            }
+
+            modalSucessoEstorno.style.display = 'flex';
+            showToast({ message: 'Estorno realizado com sucesso!', type: 'success' });
+            await loadHistorico();
+        } catch (error) {
+            console.error('Erro ao efetuar estorno:', error);
+            showToast({ message: error.message || 'Erro ao processar estorno.', type: 'error' });
+        } finally {
+            btnConfirmarEstorno.disabled = false;
+            btnConfirmarEstorno.innerHTML = 'Confirmar Estorno';
+        }
+    });
+
+    btnFecharSucessoEstorno.addEventListener('click', () => {
+        modalSucessoEstorno.style.display = 'none';
+    });
 }

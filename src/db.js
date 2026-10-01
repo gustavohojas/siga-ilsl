@@ -223,6 +223,18 @@ async function initDb() {
             criado_em TIMESTAMP WITH TIME ZONE DEFAULT NOW()
         );
 
+        CREATE TABLE IF NOT EXISTS estornos_recebimento (
+            id SERIAL PRIMARY KEY,
+            item_recebimento_id INTEGER NOT NULL REFERENCES itens_recebimento(id),
+            estoque_id INTEGER NOT NULL REFERENCES estoque(id),
+            usuario_id INTEGER NOT NULL REFERENCES usuarios(id),
+            quantidade NUMERIC NOT NULL,
+            tipo_motivo TEXT NOT NULL CHECK(tipo_motivo IN ('erro_digitacao', 'devolucao_fornecedor')),
+            justificativa TEXT NOT NULL,
+            pdf_conteudo BYTEA,
+            criado_em TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+        );
+
         CREATE TABLE IF NOT EXISTS configuracoes_sistema (
             chave TEXT PRIMARY KEY,
             valor TEXT NOT NULL,
@@ -251,6 +263,17 @@ async function initDb() {
             criado_em TIMESTAMP WITH TIME ZONE DEFAULT NOW()
         );
         ALTER TABLE dispensacoes ADD COLUMN IF NOT EXISTS guia_id INTEGER REFERENCES guias_dispensacao(id);
+        CREATE TABLE IF NOT EXISTS estornos_recebimento (
+            id SERIAL PRIMARY KEY,
+            item_recebimento_id INTEGER NOT NULL REFERENCES itens_recebimento(id),
+            estoque_id INTEGER NOT NULL REFERENCES estoque(id),
+            usuario_id INTEGER NOT NULL REFERENCES usuarios(id),
+            quantidade NUMERIC NOT NULL,
+            tipo_motivo TEXT NOT NULL CHECK(tipo_motivo IN ('erro_digitacao', 'devolucao_fornecedor')),
+            justificativa TEXT NOT NULL,
+            pdf_conteudo BYTEA,
+            criado_em TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+        );
     `);
 
     // 1. Carga Inicial do Administrador (executada apenas uma vez; se o usuário excluir futuramente, não recria)
