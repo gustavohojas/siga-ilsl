@@ -218,20 +218,36 @@ export async function renderDispensacao(container) {
         }, 100);
     };
 
-    // Carregar Centros Consumidores
+    // Carregar Centros Consumidores e Divisões agrupados
     const loadCentros = async () => {
         try {
-            const centros = await api.get('/centros-consumidores');
+            const tree = await api.get('/centros-consumidores?agrupado=true');
             selectCentro.innerHTML = '<option value="">Selecione o setor solicitante...</option>';
-            if (centros) {
-                centros.forEach(cc => {
-                    const opt = document.createElement('option');
-                    opt.value = cc.id;
-                    opt.textContent = `${cc.codigo} - ${cc.nome}`;
-                    selectCentro.appendChild(opt);
+            if (Array.isArray(tree)) {
+                tree.forEach(div => {
+                    // Divisão selecionável diretamente
+                    const optDiv = document.createElement('option');
+                    optDiv.value = div.id;
+                    optDiv.textContent = `── ${div.nome} (divisão)`;
+                    optDiv.style.fontWeight = 'bold';
+                    optDiv.style.background = 'rgba(59, 130, 246, 0.15)';
+                    selectCentro.appendChild(optDiv);
+
+                    // Centros Consumidores vinculados
+                    if (div.centros && div.centros.length > 0) {
+                        div.centros.forEach((cc, idx) => {
+                            const isLast = idx === div.centros.length - 1;
+                            const prefix = isLast ? '   └── ' : '   ├── ';
+                            const optCc = document.createElement('option');
+                            optCc.value = cc.id;
+                            optCc.textContent = `${prefix}${cc.nome}`;
+                            selectCentro.appendChild(optCc);
+                        });
+                    }
                 });
             }
         } catch (error) {
+            console.error('Erro ao carregar setores:', error);
             selectCentro.innerHTML = '<option value="">Erro ao carregar setores</option>';
         }
     };

@@ -109,9 +109,10 @@ router.post('/', async (req, res) => {
             for (const item of itens) {
                 const temGarantia = Boolean(item.garantia);
                 const dataGarantia = temGarantia && item.data_garantia ? item.data_garantia : null;
+                const vUnit = parseFloat(item.valor_unitario) || 0;
                 await tx.run(`
-                    INSERT INTO itens_empenho (nota_empenho_id, codigo_siafisico, codigo_compras, descricao, perecivel, natureza_despesa, quantidade, unidade, garantia, data_garantia)
-                    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+                    INSERT INTO itens_empenho (nota_empenho_id, codigo_siafisico, codigo_compras, descricao, perecivel, natureza_despesa, quantidade, unidade, valor_unitario, garantia, data_garantia)
+                    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
                 `, [
                     nota_empenho_id,
                     item.codigo_siafisico || null,
@@ -121,9 +122,32 @@ router.post('/', async (req, res) => {
                     item.natureza_despesa || item.natureza_despesa_id || null,
                     parseFloat(item.quantidade) || 0,
                     item.unidade || 'Unidade',
+                    vUnit,
                     temGarantia,
                     dataGarantia
                 ]);
+
+                // Auto-registro no catálogo de itens
+                if (item.codigo_siafisico && item.codigo_compras && item.descricao) {
+                    const siaf = String(item.codigo_siafisico).trim();
+                    const comp = String(item.codigo_compras).trim();
+                    const desc = String(item.descricao).trim();
+                    const catExist = await tx.get(
+                        'SELECT id, descricao FROM catalogo_itens WHERE UPPER(TRIM(codigo_siafisico)) = UPPER(TRIM($1))',
+                        [siaf]
+                    );
+                    if (!catExist) {
+                        await tx.run(
+                            'INSERT INTO catalogo_itens (codigo_siafisico, codigo_compras, descricao) VALUES ($1, $2, $3)',
+                            [siaf, comp, desc]
+                        );
+                    } else if (item.substituir_catalogo) {
+                        await tx.run(
+                            'UPDATE catalogo_itens SET codigo_compras = $1, descricao = $2, atualizado_em = NOW() WHERE id = $3',
+                            [comp, desc, catExist.id]
+                        );
+                    }
+                }
             }
 
             return { id: nota_empenho_id };

@@ -486,61 +486,199 @@ export async function renderRecebimento(container) {
     const doacaoItens = document.getElementById('doacao-itens');
     document.getElementById('doador-data').value = new Date().toISOString().split('T')[0];
 
+    // Modal de conflito de descrição com o catálogo na doação
+    const promptConflitoDoacao = (descOriginal, descNova) => {
+        return new Promise((resolve) => {
+            const modal = document.createElement('div');
+            modal.className = 'modal-overlay';
+            modal.style.display = 'flex';
+            modal.style.zIndex = '99999';
+            modal.innerHTML = `
+                <div class="modal" style="background:#0f172a; border: 1px solid rgba(255,255,255,0.2); box-shadow: 0 25px 60px rgba(0,0,0,0.95); border-radius: 12px; max-width: 500px; padding: 1.5rem; color: #f1f5f9;">
+                    <h4 style="margin: 0 0 1rem; color: #f59e0b; display: flex; align-items: center; gap: 0.5rem; font-size: 1.1rem;">
+                        ⚠️ Conflito no Catálogo de Itens
+                    </h4>
+                    <p style="margin-bottom: 0.5rem; font-size: 0.9rem; color: #94a3b8;">Este código SIAFÍSICO já está cadastrado no sistema como:</p>
+                    <div style="background: rgba(255, 255, 255, 0.06); padding: 0.75rem 1rem; border-radius: 8px; border-left: 4px solid #6366f1; font-weight: 600; margin-bottom: 1rem; color: #fff;">
+                        "${descOriginal}"
+                    </div>
+                    <p style="margin-bottom: 1.5rem; font-size: 0.9rem; color: #94a3b8;">
+                        Deseja substituir a descrição no catálogo pela nova digitada (<strong>"${descNova}"</strong>)?
+                    </p>
+                    <div style="display: flex; justify-content: flex-end; gap: 0.75rem;">
+                        <button type="button" class="btn btn-outline" id="btn-conflito-manter-d">Manter Original</button>
+                        <button type="button" class="btn btn-primary" id="btn-conflito-substituir-d">Substituir</button>
+                    </div>
+                </div>
+            `;
+            document.body.appendChild(modal);
+            modal.querySelector('#btn-conflito-manter-d').onclick = () => {
+                modal.remove();
+                resolve(false);
+            };
+            modal.querySelector('#btn-conflito-substituir-d').onclick = () => {
+                modal.remove();
+                resolve(true);
+            };
+        });
+    };
+
     const createDoacaoItem = () => {
         const div = document.createElement('div');
-        div.style.cssText = 'display:grid; grid-template-columns:2fr 1fr 1fr 1.2fr 1.1fr 1fr 1.2fr 1fr 1.2fr auto; gap:0.5rem; align-items:end; border:1px solid var(--border-glass); padding:1rem; border-radius:8px;';
+        div.style.cssText = 'border:1px solid rgba(255,255,255,0.1); background: rgba(255,255,255,0.02); padding:1.25rem; border-radius:10px; margin-bottom: 1rem;';
 
-        div.innerHTML =
-            '<div class="form-group" style="margin-bottom:0">' +
-                '<label class="form-label" style="font-size:0.8rem">Descrição</label>' +
-                '<input type="text" class="form-control d-desc" required>' +
-            '</div>' +
-            '<div class="form-group" style="margin-bottom:0">' +
-                '<label class="form-label" style="font-size:0.8rem" title="Informe a unidade em que o produto será dispensado aos centros consumidores">Menor un. de dispensação <i class="fas fa-info-circle text-muted" title="Informe a unidade em que o produto será dispensado aos centros consumidores" style="cursor:help;"></i></label>' +
-                '<select class="form-control d-un" required title="Informe a unidade em que o produto será dispensado aos centros consumidores">' +
-                    '<option value="Unidade">Unidade</option>' +
-                    '<option value="Caixa">Caixa</option>' +
-                    '<option value="Pacote">Pacote</option>' +
-                    '<option value="Litro">Litro</option>' +
-                    '<option value="Quilograma">Quilograma</option>' +
-                    '<option value="Outros">Outros</option>' +
-                '</select>' +
-            '</div>' +
-            '<div class="form-group" style="margin-bottom:0">' +
-                '<label class="form-label" style="font-size:0.8rem">Quantidade</label>' +
-                '<input type="number" class="form-control d-qtd" required min="1">' +
-            '</div>' +
-            '<div class="form-group" style="margin-bottom:0">' +
-                '<label class="form-label" style="font-size:0.8rem">Cód. Barras</label>' +
-                '<input type="text" class="form-control d-cod">' +
-            '</div>' +
-            '<div class="form-group" style="margin-bottom:0">' +
-                '<label class="form-label" style="font-size:0.8rem">Lote</label>' +
-                '<input type="text" class="form-control d-lote" placeholder="Lote">' +
-            '</div>' +
-            '<div class="form-group" style="margin-bottom:0">' +
-                '<label class="form-label" style="font-size:0.8rem">Perecível?</label>' +
-                '<select class="form-control d-per" required>' +
-                    '<option value="Não">Não</option>' +
-                    '<option value="Sim">Sim</option>' +
-                '</select>' +
-            '</div>' +
-            '<div class="form-group" style="margin-bottom:0">' +
-                '<label class="form-label" style="font-size:0.8rem">Validade</label>' +
-                '<input type="date" class="form-control d-val" disabled>' +
-            '</div>' +
-            '<div class="form-group" style="margin-bottom:0">' +
-                '<label class="form-label" style="font-size:0.8rem">Garantia?</label>' +
-                '<select class="form-control d-gar" required>' +
-                    '<option value="Não">Não</option>' +
-                    '<option value="Sim">Sim</option>' +
-                '</select>' +
-            '</div>' +
-            '<div class="form-group" style="margin-bottom:0">' +
-                '<label class="form-label" style="font-size:0.8rem">Data Garantia</label>' +
-                '<input type="date" class="form-control d-data-gar" disabled>' +
-            '</div>' +
-            '<button type="button" class="btn btn-danger btn-remove-doacao" style="padding:0.5rem;">&times;</button>';
+        div.innerHTML = `
+            <!-- LINHA 1: 1. CÓD. SIAFÍSICO | 2. CÓD. COMPRAS | 3. DESCRIÇÃO COMPLETA -->
+            <div style="display: grid; grid-template-columns: 1fr 1fr 2fr; gap: 1rem; margin-bottom: 1rem;">
+                <div class="form-group" style="margin-bottom:0">
+                    <label class="form-label" style="font-size:0.8rem">1. Cód. Siafísico *</label>
+                    <input type="text" class="form-control d-siafisico" placeholder="Ex: 123456" required autocomplete="off">
+                    <small class="text-muted" style="font-size: 0.72rem;">Operador digita primeiro</small>
+                </div>
+                <div class="form-group" style="margin-bottom:0">
+                    <label class="form-label" style="font-size:0.8rem">2. Cód. Compras *</label>
+                    <input type="text" class="form-control d-compras" placeholder="Ex: 654321" required autocomplete="off">
+                    <div class="d-compras-hint" style="display:none; font-size: 0.75rem; color: #818cf8; margin-top: 4px; max-height: 80px; overflow-y: auto;"></div>
+                </div>
+                <div class="form-group" style="margin-bottom:0">
+                    <label class="form-label" style="font-size:0.8rem">3. Descrição Completa *</label>
+                    <input type="text" class="form-control d-desc" placeholder="Auto-preenchido ou digite o nome" required>
+                </div>
+            </div>
+
+            <!-- LINHA 2: VALOR UNITÁRIO, QUANTIDADE, MENOR UNIDADE E CÓD BARRAS -->
+            <div style="display: grid; grid-template-columns: 1fr 1fr 1.5fr 1.2fr 1fr; gap: 0.75rem; margin-bottom: 1rem; align-items: end;">
+                <div class="form-group" style="margin-bottom:0">
+                    <label class="form-label" style="font-size:0.8rem">Valor Unit. (R$)</label>
+                    <input type="number" class="form-control d-vunit" placeholder="0,00" min="0" step="0.0001" value="0.00">
+                </div>
+                <div class="form-group" style="margin-bottom:0">
+                    <label class="form-label" style="font-size:0.8rem">Quantidade *</label>
+                    <input type="number" class="form-control d-qtd" required min="1" step="any" value="1">
+                </div>
+                <div class="form-group" style="margin-bottom:0">
+                    <label class="form-label" style="font-size:0.8rem" title="Informe a unidade em que o produto será dispensado aos centros consumidores">Menor un. dispensação *</label>
+                    <select class="form-control d-un" required>
+                        <option value="Unidade">Unidade</option>
+                        <option value="Caixa">Caixa</option>
+                        <option value="Pacote">Pacote</option>
+                        <option value="Litro">Litro</option>
+                        <option value="Quilograma">Quilograma</option>
+                        <option value="Metro">Metro</option>
+                        <option value="Resma">Resma</option>
+                        <option value="Galão">Galão</option>
+                        <option value="Frasco">Frasco</option>
+                        <option value="Rolo">Rolo</option>
+                        <option value="Saco">Saco</option>
+                        <option value="Lata">Lata</option>
+                        <option value="Tubo">Tubo</option>
+                        <option value="Par">Par</option>
+                        <option value="Jogo">Jogo</option>
+                        <option value="Kit">Kit</option>
+                        <option value="Outros">Outros</option>
+                    </select>
+                </div>
+                <div class="form-group" style="margin-bottom:0">
+                    <label class="form-label" style="font-size:0.8rem">Cód. Barras</label>
+                    <input type="text" class="form-control d-cod" placeholder="Opcional">
+                </div>
+                <div class="form-group" style="margin-bottom:0">
+                    <label class="form-label" style="font-size:0.8rem">Lote</label>
+                    <input type="text" class="form-control d-lote" placeholder="Lote">
+                </div>
+            </div>
+
+            <!-- LINHA 3: PERECÍVEL, VALIDADE, GARANTIA, DATA GARANTIA E REMOVER -->
+            <div style="display: grid; grid-template-columns: 1fr 1.2fr 1fr 1.2fr auto; gap: 0.75rem; align-items: end;">
+                <div class="form-group" style="margin-bottom:0">
+                    <label class="form-label" style="font-size:0.8rem">Perecível?</label>
+                    <select class="form-control d-per" required>
+                        <option value="Não">Não</option>
+                        <option value="Sim">Sim</option>
+                    </select>
+                </div>
+                <div class="form-group" style="margin-bottom:0">
+                    <label class="form-label" style="font-size:0.8rem">Validade</label>
+                    <input type="date" class="form-control d-val" disabled>
+                </div>
+                <div class="form-group" style="margin-bottom:0">
+                    <label class="form-label" style="font-size:0.8rem">Garantia?</label>
+                    <select class="form-control d-gar" required>
+                        <option value="Não">Não</option>
+                        <option value="Sim">Sim</option>
+                    </select>
+                </div>
+                <div class="form-group" style="margin-bottom:0">
+                    <label class="form-label" style="font-size:0.8rem">Data Garantia</label>
+                    <input type="date" class="form-control d-data-gar" disabled>
+                </div>
+                <button type="button" class="btn btn-danger btn-remove-doacao" style="padding:0.45rem 0.75rem;" title="Remover Item">✕</button>
+            </div>
+        `;
+
+        const siafInput = div.querySelector('.d-siafisico');
+        const compInput = div.querySelector('.d-compras');
+        const descInput = div.querySelector('.d-desc');
+        const comprasHint = div.querySelector('.d-compras-hint');
+
+        // Auto-preenchimento ao digitar SIAFÍSICO
+        siafInput.addEventListener('blur', async () => {
+            const siafVal = siafInput.value.trim();
+            if (!siafVal) return;
+            try {
+                const itemCat = await api.get('/catalogo?siafisico=' + encodeURIComponent(siafVal));
+                if (itemCat && itemCat.codigo_siafisico) {
+                    compInput.value = itemCat.codigo_compras || '';
+                    descInput.value = itemCat.descricao || '';
+                    div.dataset.catalogoOriginalDesc = itemCat.descricao || '';
+                    div.dataset.catalogoId = itemCat.id;
+                    div.dataset.substituirCatalogo = 'false';
+                    comprasHint.style.display = 'none';
+                    showToast({ message: 'Item localizado no catálogo!', type: 'info', duration: 2500 });
+                }
+            } catch (err) {
+                div.dataset.catalogoOriginalDesc = '';
+                div.dataset.catalogoId = '';
+                div.dataset.substituirCatalogo = 'false';
+            }
+        });
+
+        // Consulta de referência ao digitar Código Compras
+        compInput.addEventListener('input', async () => {
+            const compVal = compInput.value.trim();
+            if (!compVal || compVal.length < 3 || (div.dataset.catalogoOriginalDesc && descInput.value)) {
+                comprasHint.style.display = 'none';
+                return;
+            }
+            try {
+                const itensCat = await api.get('/catalogo?compras=' + encodeURIComponent(compVal));
+                if (Array.isArray(itensCat) && itensCat.length > 0) {
+                    comprasHint.style.display = 'block';
+                    comprasHint.innerHTML = `<strong>${itensCat.length} item(ns) encontrado(s) com este Cód. Compras:</strong><br>` + 
+                        itensCat.map(it => `• Siafísico <strong>${it.codigo_siafisico}</strong>: ${it.descricao}`).join('<br>');
+                } else {
+                    comprasHint.style.display = 'none';
+                }
+            } catch (err) {
+                comprasHint.style.display = 'none';
+            }
+        });
+
+        // Conflito de descrição
+        descInput.addEventListener('blur', async () => {
+            const descNova = descInput.value.trim();
+            const descOriginal = div.dataset.catalogoOriginalDesc;
+            if (descOriginal && descNova && descNova.toUpperCase() !== descOriginal.toUpperCase()) {
+                const substituir = await promptConflitoDoacao(descOriginal, descNova);
+                if (substituir) {
+                    div.dataset.substituirCatalogo = 'true';
+                    showToast({ message: 'Descrição será atualizada no catálogo ao salvar.', type: 'info' });
+                } else {
+                    descInput.value = descOriginal;
+                    div.dataset.substituirCatalogo = 'false';
+                }
+            }
+        });
 
         div.querySelector('.d-per').addEventListener('change', (ev) => {
             const valInput = div.querySelector('.d-val');
@@ -591,11 +729,39 @@ export async function renderRecebimento(container) {
             
             for (let i = 0; i < itensNodes.length; i++) {
                 const node = itensNodes[i];
-                const desc = node.querySelector('.d-desc').value;
+                const siafisico = node.querySelector('.d-siafisico').value.trim();
+                const compras = node.querySelector('.d-compras').value.trim();
+                const desc = node.querySelector('.d-desc').value.trim();
+                const vUnit = parseFloat(node.querySelector('.d-vunit').value) || 0;
                 const isPer = node.querySelector('.d-per').value === 'Sim';
                 const val = node.querySelector('.d-val').value;
                 const isGar = node.querySelector('.d-gar').value === 'Sim';
                 const dataGar = node.querySelector('.d-data-gar').value;
+                const substituirCat = node.dataset.substituirCatalogo === 'true';
+
+                if (!siafisico) {
+                    showToast({ message: `Informe o Cód. Siafísico do item #${i + 1}.`, type: 'warning' });
+                    btn.disabled = false;
+                    btn.innerHTML = 'Salvar Recebimento (Doação)';
+                    node.querySelector('.d-siafisico').focus();
+                    return;
+                }
+
+                if (!compras) {
+                    showToast({ message: `Informe o Cód. Compras do item #${i + 1}.`, type: 'warning' });
+                    btn.disabled = false;
+                    btn.innerHTML = 'Salvar Recebimento (Doação)';
+                    node.querySelector('.d-compras').focus();
+                    return;
+                }
+
+                if (!desc) {
+                    showToast({ message: `Informe a descrição do item #${i + 1}.`, type: 'warning' });
+                    btn.disabled = false;
+                    btn.innerHTML = 'Salvar Recebimento (Doação)';
+                    node.querySelector('.d-desc').focus();
+                    return;
+                }
 
                 if (isPer && !val) {
                     showToast({ message: `Informe a data de validade para o item perecível "${desc}".`, type: 'warning' });
@@ -612,7 +778,10 @@ export async function renderRecebimento(container) {
                 }
 
                 itens.push({
+                    codigo_siafisico: siafisico,
+                    codigo_compras: compras,
                     descricao: desc,
+                    valor_unitario: vUnit,
                     unidade: node.querySelector('.d-un').value,
                     quantidade: parseFloat(node.querySelector('.d-qtd').value),
                     codigo_barras: node.querySelector('.d-cod').value || null,
@@ -620,7 +789,8 @@ export async function renderRecebimento(container) {
                     perecivel: isPer,
                     validade: isPer ? val : null,
                     garantia: isGar,
-                    data_garantia: isGar ? dataGar : null
+                    data_garantia: isGar ? dataGar : null,
+                    substituir_catalogo: substituirCat
                 });
             }
 

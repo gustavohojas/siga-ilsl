@@ -13,6 +13,7 @@ export async function renderRelatorios(container) {
                     <button class="btn btn-secondary tab-btn" data-target="tab-centro">Centro Consumidor</button>
                     <button class="btn btn-secondary tab-btn" data-target="tab-lote"><i class="fas fa-barcode"></i> Rastreabilidade por Lote</button>
                     <button class="btn btn-secondary tab-btn" data-target="tab-estornos"><i class="fas fa-undo-alt"></i> Auditoria de Estornos</button>
+                    <button class="btn btn-secondary tab-btn" data-target="tab-consumo"><i class="fas fa-chart-pie"></i> Consumo Financeiro (R$)</button>
                 </div>
                 
                 <div class="card-body">
@@ -113,6 +114,162 @@ export async function renderRelatorios(container) {
                         </div>
                     </div>
 
+                    <!-- CONSUMO FINANCEIRO TAB (R$) -->
+                    <div id="tab-consumo" class="tab-content" style="display: none;">
+                        <!-- Controles e Filtro de Período -->
+                        <div style="background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.08); padding: 1.25rem; border-radius: 12px; margin-bottom: 1.5rem;">
+                            <!-- Sub-abas -->
+                            <div style="display: flex; gap: 0.5rem; flex-wrap: wrap; margin-bottom: 1.25rem;" id="consumo-subtabs">
+                                <button type="button" class="btn btn-primary btn-sm consumo-subtab-btn" data-subtab="subtab-divisao">Por Divisão</button>
+                                <button type="button" class="btn btn-secondary btn-sm consumo-subtab-btn" data-subtab="subtab-cc">Por CC</button>
+                                <button type="button" class="btn btn-secondary btn-sm consumo-subtab-btn" data-subtab="subtab-item">Por Item</button>
+                                <button type="button" class="btn btn-secondary btn-sm consumo-subtab-btn" data-subtab="subtab-mensal">Evolução Mensal</button>
+                            </div>
+
+                            <!-- Filtro de datas e botões de ação -->
+                            <div style="display: flex; gap: 1rem; align-items: flex-end; flex-wrap: wrap;">
+                                <div class="form-group mb-0" style="min-width: 170px;">
+                                    <label class="form-label" style="font-size: 0.8rem;">Data Inicial</label>
+                                    <input type="date" id="consumo-data-inicio" class="form-control">
+                                </div>
+                                <div class="form-group mb-0" style="min-width: 170px;">
+                                    <label class="form-label" style="font-size: 0.8rem;">Data Final</label>
+                                    <input type="date" id="consumo-data-fim" class="form-control">
+                                </div>
+                                <button type="button" class="btn btn-primary" id="btn-gerar-consumo">
+                                    <i class="fas fa-search"></i> Gerar
+                                </button>
+                                <button type="button" class="btn btn-secondary" id="btn-excel-consumo">
+                                    <i class="fas fa-file-excel"></i> Exportar Excel
+                                </button>
+                                <button type="button" class="btn btn-secondary" id="btn-pdf-consumo">
+                                    <i class="fas fa-file-pdf"></i> Exportar PDF
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Indicador de total no período -->
+                        <div id="consumo-total-card" style="display: none; background: rgba(16, 185, 129, 0.08); border: 1px solid rgba(16, 185, 129, 0.25); border-radius: 10px; padding: 1rem 1.5rem; margin-bottom: 1.5rem; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
+                            <div>
+                                <span style="color: var(--text-secondary); font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.5px;">Gasto Total no Período Selecionado</span>
+                                <h3 id="consumo-total-valor" style="margin: 0; color: #10b981; font-size: 1.75rem;">R$ 0,00</h3>
+                            </div>
+                            <div id="consumo-periodo-badge" style="font-size: 0.85rem; color: #94a3b8; background: rgba(255,255,255,0.05); padding: 0.4rem 0.8rem; border-radius: 6px;"></div>
+                        </div>
+
+                        <!-- SUB-ABA 1: POR DIVISÃO -->
+                        <div id="subtab-divisao" class="consumo-subtab-content" style="display: block;">
+                            <div class="consumo-charts-container" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(360px, 1fr)); gap: 1.5rem; margin-bottom: 1.5rem;">
+                                <div class="card p-3" style="background: rgba(15, 23, 42, 0.85); border: 1px solid rgba(255,255,255,0.08); border-radius: 12px;">
+                                    <h4 style="margin-top:0; margin-bottom: 1rem; color: #fff; font-size: 1rem;">🥧 Proporção de Gastos por Divisão</h4>
+                                    <div style="height: 300px; position: relative;">
+                                        <canvas id="chart-divisao-pizza"></canvas>
+                                    </div>
+                                </div>
+                                <div class="card p-3" style="background: rgba(15, 23, 42, 0.85); border: 1px solid rgba(255,255,255,0.08); border-radius: 12px;">
+                                    <h4 style="margin-top:0; margin-bottom: 1rem; color: #fff; font-size: 1rem;">📊 Comparativo entre Divisões (R$)</h4>
+                                    <div style="height: 300px; position: relative;">
+                                        <canvas id="chart-divisao-barras"></canvas>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="consumo-table-container card p-3" style="background: rgba(15, 23, 42, 0.85); border: 1px solid rgba(255,255,255,0.08); border-radius: 12px; overflow-x: auto;">
+                                <h4 style="margin-top:0; margin-bottom: 1rem; color: #fff; font-size: 1rem;">Detalhamento por Divisão</h4>
+                                <div id="table-consumo-divisao-wrapper"></div>
+                            </div>
+                        </div>
+
+                        <!-- SUB-ABA 2: POR CENTRO CONSUMIDOR -->
+                        <div id="subtab-cc" class="consumo-subtab-content" style="display: none;">
+                            <div class="consumo-charts-container card p-3" style="background: rgba(15, 23, 42, 0.85); border: 1px solid rgba(255,255,255,0.08); border-radius: 12px; margin-bottom: 1.5rem;">
+                                <h4 style="margin-top:0; margin-bottom: 1rem; color: #fff; font-size: 1rem;">📊 Top 10 Centros Consumidores (R$)</h4>
+                                <div style="height: 340px; position: relative;">
+                                    <canvas id="chart-cc-barras"></canvas>
+                                </div>
+                            </div>
+                            <div class="consumo-table-container card p-3" style="background: rgba(15, 23, 42, 0.85); border: 1px solid rgba(255,255,255,0.08); border-radius: 12px; overflow-x: auto;">
+                                <h4 style="margin-top:0; margin-bottom: 1rem; color: #fff; font-size: 1rem;">Detalhamento por Centro Consumidor</h4>
+                                <div id="table-consumo-cc-wrapper"></div>
+                            </div>
+                        </div>
+
+                        <!-- SUB-ABA 3: POR ITEM -->
+                        <div id="subtab-item" class="consumo-subtab-content" style="display: none;">
+                            <div class="consumo-charts-container card p-3" style="background: rgba(15, 23, 42, 0.85); border: 1px solid rgba(255,255,255,0.08); border-radius: 12px; margin-bottom: 1.5rem;">
+                                <h4 style="margin-top:0; margin-bottom: 1rem; color: #fff; font-size: 1rem;">📊 Top 10 Itens Mais Consumidos em R$</h4>
+                                <div style="height: 340px; position: relative;">
+                                    <canvas id="chart-item-barras"></canvas>
+                                </div>
+                            </div>
+                            <div class="consumo-table-container card p-3" style="background: rgba(15, 23, 42, 0.85); border: 1px solid rgba(255,255,255,0.08); border-radius: 12px; overflow-x: auto;">
+                                <h4 style="margin-top:0; margin-bottom: 1rem; color: #fff; font-size: 1rem;">Detalhamento por Item</h4>
+                                <div id="table-consumo-item-wrapper"></div>
+                            </div>
+                        </div>
+
+                        <!-- SUB-ABA 4: EVOLUÇÃO MENSAL -->
+                        <div id="subtab-mensal" class="consumo-subtab-content" style="display: none;">
+                            <div style="background: rgba(255, 255, 255, 0.02); border: 1px solid rgba(255, 255, 255, 0.06); padding: 1rem; border-radius: 10px; margin-bottom: 1.5rem;">
+                                <div style="display: flex; gap: 1.5rem; align-items: center; flex-wrap: wrap; margin-bottom: 0.75rem;">
+                                    <strong style="color: #fff; font-size: 0.9rem;">Séries do Gráfico:</strong>
+                                    <label style="display: inline-flex; align-items: center; gap: 0.4rem; cursor: pointer; color: #f1f5f9;">
+                                        <input type="radio" name="mensal-tipo-serie" value="total" checked> Total Geral
+                                    </label>
+                                    <label style="display: inline-flex; align-items: center; gap: 0.4rem; cursor: pointer; color: #f1f5f9;">
+                                        <input type="radio" name="mensal-tipo-serie" value="divisao"> Comparar por Divisão
+                                    </label>
+                                    <label style="display: inline-flex; align-items: center; gap: 0.4rem; cursor: pointer; color: #f1f5f9;">
+                                        <input type="radio" name="mensal-tipo-serie" value="cc"> Comparar por Centro Consumidor
+                                    </label>
+                                </div>
+                                <div id="mensal-series-selector" style="display: none; padding-top: 0.75rem; border-top: 1px solid rgba(255,255,255,0.06);">
+                                    <small style="color: var(--text-secondary); display: block; margin-bottom: 0.5rem;">
+                                        Selecione até 5 itens para visualização simultânea:
+                                    </small>
+                                    <div id="mensal-series-checkboxes" style="display: flex; flex-wrap: wrap; gap: 0.75rem;"></div>
+                                </div>
+                            </div>
+
+                            <div class="consumo-charts-container card p-3" style="background: rgba(15, 23, 42, 0.85); border: 1px solid rgba(255,255,255,0.08); border-radius: 12px; margin-bottom: 1.5rem;">
+                                <h4 style="margin-top:0; margin-bottom: 1rem; color: #fff; font-size: 1rem;">📈 Evolução Mensal do Consumo</h4>
+                                <div style="height: 350px; position: relative;">
+                                    <canvas id="chart-mensal-linha"></canvas>
+                                </div>
+                            </div>
+                            <div class="consumo-table-container card p-3" style="background: rgba(15, 23, 42, 0.85); border: 1px solid rgba(255,255,255,0.08); border-radius: 12px; overflow-x: auto;">
+                                <h4 style="margin-top:0; margin-bottom: 1rem; color: #fff; font-size: 1rem;">Detalhamento Mensal</h4>
+                                <div id="table-consumo-mensal-wrapper"></div>
+                            </div>
+                        </div>
+
+                    </div>
+
+                </div>
+            </div>
+        </div>
+
+        <!-- MODAL DE EXPORTAÇÃO PDF DO RELATÓRIO DE CONSUMO -->
+        <div id="modal-export-pdf" class="modal-overlay" style="display: none; z-index: 99999;">
+            <div class="modal" style="background: #0f172a; border: 1px solid rgba(255,255,255,0.2); box-shadow: 0 25px 60px rgba(0,0,0,0.95); border-radius: 12px; max-width: 440px; padding: 1.75rem; color: #f1f5f9;">
+                <h4 style="margin: 0 0 1rem; color: #fff; font-size: 1.15rem; display: flex; align-items: center; gap: 0.5rem;">
+                    📄 O que incluir no PDF?
+                </h4>
+                <p style="color: var(--text-secondary); font-size: 0.875rem; margin-bottom: 1.25rem;">
+                    Escolha os componentes que deseja incluir no documento gerado da aba ativa:
+                </p>
+                <div style="display: flex; flex-direction: column; gap: 0.85rem; margin-bottom: 1.75rem;">
+                    <label style="display: inline-flex; align-items: center; gap: 0.75rem; cursor: pointer; color: #fff;">
+                        <input type="checkbox" id="chk-pdf-graficos" checked style="width: 1.2rem; height: 1.2rem; accent-color: var(--accent-primary);">
+                        <span>Gráficos <small style="color: var(--text-muted);">(Captura visual renderizada)</small></span>
+                    </label>
+                    <label style="display: inline-flex; align-items: center; gap: 0.75rem; cursor: pointer; color: #fff;">
+                        <input type="checkbox" id="chk-pdf-tabelas" checked style="width: 1.2rem; height: 1.2rem; accent-color: var(--accent-primary);">
+                        <span>Tabelas <small style="color: var(--text-muted);">(Dados tabulares detalhados)</small></span>
+                    </label>
+                </div>
+                <div style="display: flex; justify-content: flex-end; gap: 0.75rem;">
+                    <button type="button" class="btn btn-outline" id="btn-pdf-cancel">Cancelar</button>
+                    <button type="button" class="btn btn-primary" id="btn-pdf-confirm">Gerar PDF</button>
                 </div>
             </div>
         </div>
@@ -561,5 +718,747 @@ export async function renderRelatorios(container) {
     btnGerarEstornos.addEventListener('click', gerarRelatorioEstornos);
     estornosSearchInput.addEventListener('keypress', (e) => {
         if (e.key === 'Enter') gerarRelatorioEstornos();
+    });
+
+    // =========================================================================
+    // SEÇÃO: CONSUMO FINANCEIRO (R$) — CHART.JS, EXCEL E PDF
+    // =========================================================================
+
+    const consumoDataInicio = document.getElementById('consumo-data-inicio');
+    const consumoDataFim = document.getElementById('consumo-data-fim');
+    const btnGerarConsumo = document.getElementById('btn-gerar-consumo');
+    const btnExcelConsumo = document.getElementById('btn-excel-consumo');
+    const btnPdfConsumo = document.getElementById('btn-pdf-consumo');
+    const consumoTotalCard = document.getElementById('consumo-total-card');
+    const consumoTotalValor = document.getElementById('consumo-total-valor');
+    const consumoPeriodoBadge = document.getElementById('consumo-periodo-badge');
+    const consumoSubtabBtns = document.querySelectorAll('.consumo-subtab-btn');
+
+    const tableConsumoDivisaoWrapper = document.getElementById('table-consumo-divisao-wrapper');
+    const tableConsumoCcWrapper = document.getElementById('table-consumo-cc-wrapper');
+    const tableConsumoItemWrapper = document.getElementById('table-consumo-item-wrapper');
+    const tableConsumoMensalWrapper = document.getElementById('table-consumo-mensal-wrapper');
+
+    const modalExportPdf = document.getElementById('modal-export-pdf');
+    const chkPdfGraficos = document.getElementById('chk-pdf-graficos');
+    const chkPdfTabelas = document.getElementById('chk-pdf-tabelas');
+    const btnPdfCancel = document.getElementById('btn-pdf-cancel');
+    const btnPdfConfirm = document.getElementById('btn-pdf-confirm');
+
+    // Inicializar datas padrão (Início do ano corrente até hoje)
+    const dataAtual = new Date();
+    const anoAtual = dataAtual.getFullYear();
+    consumoDataInicio.value = `${anoAtual}-01-01`;
+    consumoDataFim.value = dataAtual.toISOString().split('T')[0];
+
+    // Variáveis de estado e instâncias do Chart.js
+    let activeConsumoSubtab = 'subtab-divisao';
+    let dadosConsumoCache = null;
+    let chartDivisaoPizza = null;
+    let chartDivisaoBarras = null;
+    let chartCCBarras = null;
+    let chartItemBarras = null;
+    let chartMensalLinha = null;
+
+    const chartColors = [
+        '#6366f1', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6',
+        '#3b82f6', '#ec4899', '#14b8a6', '#f97316', '#06b6d4',
+        '#84cc16', '#a855f7', '#64748b', '#e11d48', '#d97706'
+    ];
+
+    // Alternar sub-abas de consumo
+    consumoSubtabBtns.forEach(btn => {
+        btn.addEventListener('click', () => {
+            consumoSubtabBtns.forEach(b => b.classList.replace('btn-primary', 'btn-secondary'));
+            btn.classList.replace('btn-secondary', 'btn-primary');
+            const targetId = btn.getAttribute('data-subtab');
+            activeConsumoSubtab = targetId;
+            document.querySelectorAll('.consumo-subtab-content').forEach(c => c.style.display = 'none');
+            const targetEl = document.getElementById(targetId);
+            if (targetEl) targetEl.style.display = 'block';
+
+            // Redesenhar gráficos ao trocar de aba caso já existam dados
+            if (dadosConsumoCache) {
+                renderizarGraficosAtuais();
+            }
+        });
+    });
+
+    const formatCurrency = (val) => {
+        return (Number(val) || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+    };
+
+    // Função principal para carregar dados de consumo
+    const carregarRelatorioConsumo = async () => {
+        const ini = consumoDataInicio.value;
+        const fim = consumoDataFim.value;
+
+        btnGerarConsumo.disabled = true;
+        btnGerarConsumo.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Gerando...';
+
+        try {
+            const queryParams = new URLSearchParams();
+            if (ini) queryParams.append('data_inicio', ini);
+            if (fim) queryParams.append('data_fim', fim);
+
+            const url = `/relatorios/consumo?${queryParams.toString()}`;
+            const data = await api.get(url);
+            dadosConsumoCache = data;
+
+            // Atualiza Card de Total
+            consumoTotalCard.style.display = 'flex';
+            consumoTotalValor.textContent = formatCurrency(data.total_geral);
+            const dtIniFmt = ini ? ini.split('-').reverse().join('/') : 'Início';
+            const dtFimFmt = fim ? fim.split('-').reverse().join('/') : 'Hoje';
+            consumoPeriodoBadge.textContent = `Período: ${dtIniFmt} até ${dtFimFmt}`;
+
+            // Renderizar Tabelas
+            renderizarTabelaDivisao(data.por_divisao, data.total_geral);
+            renderizarTabelaCC(data.por_cc, data.total_geral);
+            renderizarTabelaItem(data.por_item, data.total_geral);
+            renderizarTabelaMensal(data.evolucao_mensal, data.total_geral);
+
+            // Renderizar Gráficos
+            renderizarGraficosAtuais();
+
+            showToast({ message: 'Relatório de consumo gerado com sucesso!', type: 'success' });
+        } catch (error) {
+            console.error('Erro ao gerar relatório de consumo:', error);
+            showToast({ message: 'Erro ao gerar relatório de consumo financeiro.', type: 'error' });
+        } finally {
+            btnGerarConsumo.disabled = false;
+            btnGerarConsumo.innerHTML = '<i class="fas fa-search"></i> Gerar';
+        }
+    };
+
+    // Renderizar Tabelas
+    const renderizarTabelaDivisao = (divisoes, totalGeral) => {
+        if (!divisoes || divisoes.length === 0) {
+            tableConsumoDivisaoWrapper.innerHTML = '<p class="text-center text-muted p-3">Nenhuma dispensação para divisões no período.</p>';
+            return;
+        }
+        let html = `
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>Divisão Organizacional</th>
+                        <th style="text-align: right;">Valor Total (R$)</th>
+                        <th style="text-align: right;">% do Total</th>
+                    </tr>
+                </thead>
+                <tbody>
+        `;
+        divisoes.forEach(d => {
+            html += `
+                <tr>
+                    <td><strong>${d.nome}</strong></td>
+                    <td style="text-align: right; color: #10b981; font-weight: 600;">${formatCurrency(d.valor_total)}</td>
+                    <td style="text-align: right;">${d.percentual.toFixed(2)}%</td>
+                </tr>
+            `;
+        });
+        html += `
+                </tbody>
+                <tfoot>
+                    <tr style="background: rgba(255,255,255,0.06); font-weight: bold;">
+                        <td>TOTAL GERAL</td>
+                        <td style="text-align: right; color: #10b981; font-size: 1.05rem;">${formatCurrency(totalGeral)}</td>
+                        <td style="text-align: right;">100,00%</td>
+                    </tr>
+                </tfoot>
+            </table>
+        `;
+        tableConsumoDivisaoWrapper.innerHTML = html;
+    };
+
+    const renderizarTabelaCC = (ccs, totalGeral) => {
+        if (!ccs || ccs.length === 0) {
+            tableConsumoCcWrapper.innerHTML = '<p class="text-center text-muted p-3">Nenhuma dispensação para centros consumidores no período.</p>';
+            return;
+        }
+        let html = `
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>Centro Consumidor</th>
+                        <th>Divisão Vinculada</th>
+                        <th style="text-align: right;">Valor Total (R$)</th>
+                        <th style="text-align: right;">% do Total</th>
+                    </tr>
+                </thead>
+                <tbody>
+        `;
+        ccs.forEach(c => {
+            html += `
+                <tr>
+                    <td><strong>${c.nome}</strong></td>
+                    <td><span class="badge badge-info" style="font-size:0.8rem;">${c.divisao_nome}</span></td>
+                    <td style="text-align: right; color: #10b981; font-weight: 600;">${formatCurrency(c.valor_total)}</td>
+                    <td style="text-align: right;">${c.percentual.toFixed(2)}%</td>
+                </tr>
+            `;
+        });
+        html += `
+                </tbody>
+                <tfoot>
+                    <tr style="background: rgba(255,255,255,0.06); font-weight: bold;">
+                        <td colspan="2">TOTAL GERAL</td>
+                        <td style="text-align: right; color: #10b981; font-size: 1.05rem;">${formatCurrency(totalGeral)}</td>
+                        <td style="text-align: right;">100,00%</td>
+                    </tr>
+                </tfoot>
+            </table>
+        `;
+        tableConsumoCcWrapper.innerHTML = html;
+    };
+
+    const renderizarTabelaItem = (itens, totalGeral) => {
+        if (!itens || itens.length === 0) {
+            tableConsumoItemWrapper.innerHTML = '<p class="text-center text-muted p-3">Nenhum item consumido no período.</p>';
+            return;
+        }
+        let html = `
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>Descrição do Item</th>
+                        <th style="text-align: center;">Qtd Dispensada</th>
+                        <th>Menor Unidade</th>
+                        <th style="text-align: right;">Valor Total (R$)</th>
+                    </tr>
+                </thead>
+                <tbody>
+        `;
+        itens.forEach(it => {
+            html += `
+                <tr>
+                    <td><strong>${it.descricao}</strong></td>
+                    <td style="text-align: center;"><span class="badge badge-secondary">${it.quantidade}</span></td>
+                    <td>${it.unidade || '-'}</td>
+                    <td style="text-align: right; color: #10b981; font-weight: 600;">${formatCurrency(it.valor_total)}</td>
+                </tr>
+            `;
+        });
+        html += `
+                </tbody>
+                <tfoot>
+                    <tr style="background: rgba(255,255,255,0.06); font-weight: bold;">
+                        <td colspan="3">TOTAL GERAL</td>
+                        <td style="text-align: right; color: #10b981; font-size: 1.05rem;">${formatCurrency(totalGeral)}</td>
+                    </tr>
+                </tfoot>
+            </table>
+        `;
+        tableConsumoItemWrapper.innerHTML = html;
+    };
+
+    const renderizarTabelaMensal = (meses, totalGeral) => {
+        if (!meses || meses.length === 0) {
+            tableConsumoMensalWrapper.innerHTML = '<p class="text-center text-muted p-3">Nenhum dado mensal no período.</p>';
+            return;
+        }
+        let html = `
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>Mês / Ano</th>
+                        <th style="text-align: right;">Valor Total Consumido (R$)</th>
+                    </tr>
+                </thead>
+                <tbody>
+        `;
+        meses.forEach(m => {
+            html += `
+                <tr>
+                    <td><strong>${m.mes_formatado}</strong></td>
+                    <td style="text-align: right; color: #10b981; font-weight: 600;">${formatCurrency(m.valor_total)}</td>
+                </tr>
+            `;
+        });
+        html += `
+                </tbody>
+                <tfoot>
+                    <tr style="background: rgba(255,255,255,0.06); font-weight: bold;">
+                        <td>TOTAL GERAL</td>
+                        <td style="text-align: right; color: #10b981; font-size: 1.05rem;">${formatCurrency(totalGeral)}</td>
+                    </tr>
+                </tfoot>
+            </table>
+        `;
+        tableConsumoMensalWrapper.innerHTML = html;
+    };
+
+    // Renderizar Gráficos com Chart.js
+    const renderizarGraficosAtuais = () => {
+        if (!dadosConsumoCache || !window.Chart) return;
+
+        Chart.defaults.color = '#94a3b8';
+        Chart.defaults.borderColor = 'rgba(255, 255, 255, 0.08)';
+
+        if (activeConsumoSubtab === 'subtab-divisao') {
+            renderizarGraficosDivisao();
+        } else if (activeConsumoSubtab === 'subtab-cc') {
+            renderizarGraficoCC();
+        } else if (activeConsumoSubtab === 'subtab-item') {
+            renderizarGraficoItem();
+        } else if (activeConsumoSubtab === 'subtab-mensal') {
+            renderizarGraficoMensal();
+        }
+    };
+
+    const renderizarGraficosDivisao = () => {
+        const divisoes = dadosConsumoCache.por_divisao || [];
+        const labels = divisoes.map(d => d.nome);
+        const dataVals = divisoes.map(d => d.valor_total);
+
+        // 1. Gráfico Pizza
+        const ctxPizza = document.getElementById('chart-divisao-pizza');
+        if (ctxPizza) {
+            if (chartDivisaoPizza) chartDivisaoPizza.destroy();
+            chartDivisaoPizza = new Chart(ctxPizza, {
+                type: 'doughnut',
+                data: {
+                    labels,
+                    datasets: [{
+                        data: dataVals,
+                        backgroundColor: chartColors.slice(0, labels.length),
+                        borderWidth: 2,
+                        borderColor: '#0f172a'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { position: 'bottom', labels: { boxWidth: 12, padding: 12, font: { size: 11 } } },
+                        tooltip: {
+                            callbacks: {
+                                label: (context) => ` ${context.label}: ${formatCurrency(context.raw)}`
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        // 2. Gráfico Barras
+        const ctxBarras = document.getElementById('chart-divisao-barras');
+        if (ctxBarras) {
+            if (chartDivisaoBarras) chartDivisaoBarras.destroy();
+            chartDivisaoBarras = new Chart(ctxBarras, {
+                type: 'bar',
+                data: {
+                    labels,
+                    datasets: [{
+                        label: 'Gasto por Divisão (R$)',
+                        data: dataVals,
+                        backgroundColor: '#6366f1',
+                        borderRadius: 6
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            callbacks: {
+                                label: (context) => ` Total: ${formatCurrency(context.raw)}`
+                            }
+                        }
+                    },
+                    scales: {
+                        y: {
+                            ticks: {
+                                callback: (val) => 'R$ ' + Number(val).toLocaleString('pt-BR')
+                            }
+                        },
+                        x: {
+                            ticks: {
+                                maxRotation: 45,
+                                minRotation: 0,
+                                font: { size: 10 }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+    };
+
+    const renderizarGraficoCC = () => {
+        const ccs = dadosConsumoCache.por_cc || [];
+        const top10 = ccs.slice(0, 10);
+        const labels = top10.map(c => c.nome);
+        const dataVals = top10.map(c => c.valor_total);
+
+        const ctx = document.getElementById('chart-cc-barras');
+        if (ctx) {
+            if (chartCCBarras) chartCCBarras.destroy();
+            chartCCBarras = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels,
+                    datasets: [{
+                        label: 'Gasto do Centro Consumidor (R$)',
+                        data: dataVals,
+                        backgroundColor: '#10b981',
+                        borderRadius: 6
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    indexAxis: 'y',
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            callbacks: {
+                                label: (context) => ` Total: ${formatCurrency(context.raw)}`
+                            }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            ticks: {
+                                callback: (val) => 'R$ ' + Number(val).toLocaleString('pt-BR')
+                            }
+                        }
+                    }
+                }
+            });
+        }
+    };
+
+    const renderizarGraficoItem = () => {
+        const itens = dadosConsumoCache.por_item || [];
+        const top10 = itens.slice(0, 10);
+        const labels = top10.map(i => i.descricao.length > 25 ? i.descricao.slice(0, 25) + '...' : i.descricao);
+        const dataVals = top10.map(i => i.valor_total);
+
+        const ctx = document.getElementById('chart-item-barras');
+        if (ctx) {
+            if (chartItemBarras) chartItemBarras.destroy();
+            chartItemBarras = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels,
+                    datasets: [{
+                        label: 'Consumo do Item (R$)',
+                        data: dataVals,
+                        backgroundColor: '#f59e0b',
+                        borderRadius: 6
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    indexAxis: 'y',
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            callbacks: {
+                                label: (context) => ` Total: ${formatCurrency(context.raw)}`
+                            }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            ticks: {
+                                callback: (val) => 'R$ ' + Number(val).toLocaleString('pt-BR')
+                            }
+                        }
+                    }
+                }
+            });
+        }
+    };
+
+    // Evolução Mensal com Seletor Dinâmico de Séries
+    const seriesSelectorBox = document.getElementById('mensal-series-selector');
+    const seriesCheckboxes = document.getElementById('mensal-series-checkboxes');
+    const radioSeries = document.querySelectorAll('input[name="mensal-tipo-serie"]');
+
+    radioSeries.forEach(r => {
+        r.addEventListener('change', () => {
+            configurarSeletorSeries();
+            renderizarGraficoMensal();
+        });
+    });
+
+    const configurarSeletorSeries = () => {
+        if (!dadosConsumoCache) return;
+        const tipo = document.querySelector('input[name="mensal-tipo-serie"]:checked').value;
+        if (tipo === 'total') {
+            seriesSelectorBox.style.display = 'none';
+            seriesCheckboxes.innerHTML = '';
+            return;
+        }
+
+        seriesSelectorBox.style.display = 'block';
+        const lista = tipo === 'divisao' ? dadosConsumoCache.evolucao_divisoes : dadosConsumoCache.evolucao_ccs;
+
+        let html = '';
+        lista.forEach((item, idx) => {
+            const isChecked = idx < 3 ? 'checked' : '';
+            html += `
+                <label style="display:inline-flex; align-items:center; gap:0.4rem; background:rgba(255,255,255,0.05); padding:4px 10px; border-radius:6px; font-size:0.85rem; cursor:pointer;">
+                    <input type="checkbox" class="serie-checkbox" value="${item.id}" ${isChecked} style="accent-color:var(--accent-primary);">
+                    <span>${item.nome}</span>
+                </label>
+            `;
+        });
+        seriesCheckboxes.innerHTML = html;
+
+        // Monitorar limite máximo de 5 seleções simultâneas
+        seriesCheckboxes.querySelectorAll('.serie-checkbox').forEach(cb => {
+            cb.addEventListener('change', () => {
+                const checkedCount = seriesCheckboxes.querySelectorAll('.serie-checkbox:checked').length;
+                if (checkedCount > 5) {
+                    cb.checked = false;
+                    showToast({ message: 'Selecione no máximo 5 itens para comparação.', type: 'warning' });
+                    return;
+                }
+                renderizarGraficoMensal();
+            });
+        });
+    };
+
+    const renderizarGraficoMensal = () => {
+        if (!dadosConsumoCache) return;
+        const ctx = document.getElementById('chart-mensal-linha');
+        if (!ctx) return;
+
+        const mesesLabels = dadosConsumoCache.meses || [];
+        const tipo = document.querySelector('input[name="mensal-tipo-serie"]:checked').value;
+        const datasets = [];
+
+        if (tipo === 'total') {
+            const dataVals = (dadosConsumoCache.evolucao_mensal || []).map(m => m.valor_total);
+            datasets.push({
+                label: 'Gasto Total Mensal (R$)',
+                data: dataVals,
+                borderColor: '#10b981',
+                backgroundColor: 'rgba(16, 185, 129, 0.15)',
+                fill: true,
+                tension: 0.3,
+                pointRadius: 5
+            });
+        } else {
+            const lista = tipo === 'divisao' ? dadosConsumoCache.evolucao_divisoes : dadosConsumoCache.evolucao_ccs;
+            const checkedIds = Array.from(seriesCheckboxes.querySelectorAll('.serie-checkbox:checked')).map(cb => String(cb.value));
+
+            let colorIdx = 0;
+            lista.forEach(item => {
+                if (checkedIds.includes(String(item.id))) {
+                    const cor = chartColors[colorIdx % chartColors.length];
+                    colorIdx++;
+                    datasets.push({
+                        label: item.nome,
+                        data: item.valores,
+                        borderColor: cor,
+                        backgroundColor: 'transparent',
+                        tension: 0.3,
+                        pointRadius: 4,
+                        borderWidth: 2
+                    });
+                }
+            });
+        }
+
+        if (chartMensalLinha) chartMensalLinha.destroy();
+        chartMensalLinha = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: mesesLabels,
+                datasets
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'top',
+                        labels: { boxWidth: 12, padding: 10, font: { size: 11 } }
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: (context) => ` ${context.dataset.label}: ${formatCurrency(context.raw)}`
+                        }
+                    }
+                },
+                scales: {
+                    y: {
+                        ticks: {
+                            callback: (val) => 'R$ ' + Number(val).toLocaleString('pt-BR')
+                        }
+                    }
+                }
+            }
+        });
+    };
+
+    // Botão Gerar Relatório
+    btnGerarConsumo.addEventListener('click', carregarRelatorioConsumo);
+
+    // Botão Exportar Excel
+    btnExcelConsumo.addEventListener('click', () => {
+        const ini = consumoDataInicio.value;
+        const fim = consumoDataFim.value;
+        const queryParams = new URLSearchParams();
+        if (ini) queryParams.append('data_inicio', ini);
+        if (fim) queryParams.append('data_fim', fim);
+
+        const url = `/relatorios/consumo/export/excel?${queryParams.toString()}`;
+        api.get(url).catch(err => {
+            showToast({ message: 'Erro ao exportar Excel.', type: 'error' });
+        });
+    });
+
+    // =========================================================================
+    // EXPORTAÇÃO PDF (HTML2CANVAS + JSPDF)
+    // =========================================================================
+
+    const atualizarEstadoBtnPdf = () => {
+        const algumMarcado = chkPdfGraficos.checked || chkPdfTabelas.checked;
+        btnPdfConfirm.disabled = !algumMarcado;
+        if (!algumMarcado) {
+            btnPdfConfirm.style.opacity = '0.5';
+            btnPdfConfirm.style.cursor = 'not-allowed';
+        } else {
+            btnPdfConfirm.style.opacity = '1';
+            btnPdfConfirm.style.cursor = 'pointer';
+        }
+    };
+
+    chkPdfGraficos.addEventListener('change', atualizarEstadoBtnPdf);
+    chkPdfTabelas.addEventListener('change', atualizarEstadoBtnPdf);
+
+    btnPdfConsumo.addEventListener('click', () => {
+        if (!dadosConsumoCache) {
+            showToast({ message: 'Gere o relatório antes de exportar o PDF.', type: 'warning' });
+            return;
+        }
+        modalExportPdf.style.display = 'flex';
+        modalExportPdf.classList.add('active');
+        atualizarEstadoBtnPdf();
+    });
+
+    const fecharModalPdf = () => {
+        modalExportPdf.style.display = 'none';
+        modalExportPdf.classList.remove('active');
+    };
+
+    btnPdfCancel.addEventListener('click', fecharModalPdf);
+    modalExportPdf.addEventListener('click', (e) => {
+        if (e.target === modalExportPdf) fecharModalPdf();
+    });
+
+    btnPdfConfirm.addEventListener('click', async () => {
+        const incluirGraficos = chkPdfGraficos.checked;
+        const incluirTabelas = chkPdfTabelas.checked;
+
+        if (!incluirGraficos && !incluirTabelas) return;
+
+        fecharModalPdf();
+        showToast({ message: 'Gerando PDF... Aguarde um momento.', type: 'info', duration: 3000 });
+
+        try {
+            if (!window.jspdf || !window.html2canvas) {
+                throw new Error('Bibliotecas de PDF ainda não foram carregadas pelo navegador.');
+            }
+
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF({
+                orientation: 'landscape',
+                unit: 'mm',
+                format: 'a4'
+            });
+
+            const subtabEl = document.getElementById(activeConsumoSubtab);
+            const chartsEl = subtabEl ? subtabEl.querySelector('.consumo-charts-container') : null;
+            const tableEl = subtabEl ? subtabEl.querySelector('.consumo-table-container') : null;
+
+            const pageWidth = doc.internal.pageSize.getWidth();
+            const pageHeight = doc.internal.pageSize.getHeight();
+
+            // Cabeçalho institucional do documento
+            const renderCabecalhoPdf = (tituloAba) => {
+                doc.setFillColor(15, 23, 42); // #0f172a
+                doc.rect(0, 0, pageWidth, 24, 'F');
+                
+                doc.setTextColor(255, 255, 255);
+                doc.setFont('helvetica', 'bold');
+                doc.setFontSize(14);
+                doc.text('SIGA-ILSL — Sistema Integrado de Gestão de Almoxarifado', 14, 10);
+                
+                doc.setFont('helvetica', 'normal');
+                doc.setFontSize(9);
+                doc.setTextColor(148, 163, 184); // #94a3b8
+                const iniFmt = consumoDataInicio.value ? consumoDataInicio.value.split('-').reverse().join('/') : 'Início';
+                const fimFmt = consumoDataFim.value ? consumoDataFim.value.split('-').reverse().join('/') : 'Hoje';
+                doc.text(`Relatório de Consumo Financeiro — ${tituloAba} | Período: ${iniFmt} a ${fimFmt}`, 14, 16);
+                doc.text(`Gerado em: ${new Date().toLocaleString('pt-BR')}`, pageWidth - 14, 16, { align: 'right' });
+            };
+
+            const nomeSubtabMap = {
+                'subtab-divisao': 'Por Divisão',
+                'subtab-cc': 'Por Centro Consumidor',
+                'subtab-item': 'Por Item',
+                'subtab-mensal': 'Evolução Mensal'
+            };
+            const nomeAbaAtiva = nomeSubtabMap[activeConsumoSubtab] || 'Consumo';
+
+            let yOffset = 30;
+
+            // 1. Capturar e incluir gráficos
+            if (incluirGraficos && chartsEl) {
+                renderCabecalhoPdf(nomeAbaAtiva);
+
+                const canvasGraficos = await window.html2canvas(chartsEl, {
+                    scale: 2,
+                    backgroundColor: '#0f172a',
+                    useCORS: true
+                });
+
+                const imgGraficosData = canvasGraficos.toDataURL('image/png');
+                const imgWidth = pageWidth - 28;
+                const imgHeight = (canvasGraficos.height * imgWidth) / canvasGraficos.width;
+                const maxHeight = pageHeight - yOffset - 15;
+
+                const finalHeight = Math.min(imgHeight, maxHeight);
+                doc.addImage(imgGraficosData, 'PNG', 14, yOffset, imgWidth, finalHeight);
+
+                if (incluirTabelas && tableEl) {
+                    doc.addPage();
+                    yOffset = 30;
+                }
+            }
+
+            // 2. Capturar e incluir tabelas
+            if (incluirTabelas && tableEl) {
+                renderCabecalhoPdf(nomeAbaAtiva + (incluirGraficos ? ' (Tabelas)' : ''));
+
+                const canvasTabela = await window.html2canvas(tableEl, {
+                    scale: 2,
+                    backgroundColor: '#0f172a',
+                    useCORS: true
+                });
+
+                const imgTabelaData = canvasTabela.toDataURL('image/png');
+                const imgWidth = pageWidth - 28;
+                const imgHeight = (canvasTabela.height * imgWidth) / canvasTabela.width;
+                const maxHeight = pageHeight - yOffset - 15;
+
+                const finalHeight = Math.min(imgHeight, maxHeight);
+                doc.addImage(imgTabelaData, 'PNG', 14, yOffset, imgWidth, finalHeight);
+            }
+
+            doc.save(`relatorio_consumo_ilsl_${Date.now()}.pdf`);
+            showToast({ message: 'PDF exportado com sucesso!', type: 'success' });
+        } catch (err) {
+            console.error('Erro ao gerar PDF:', err);
+            showToast({ message: 'Erro ao gerar o arquivo PDF: ' + err.message, type: 'error' });
+        }
     });
 }

@@ -545,6 +545,379 @@ router.get('/estornos/auditoria', async (req, res) => {
     }
 });
 
+// GET /consumo - Relatório consolidado de consumo financeiro (R$)
+router.get('/consumo', async (req, res) => {
+    try {
+        const { all } = getDb();
+        const { data_inicio, data_fim } = req.query;
+
+        let whereClause = 'WHERE 1=1';
+        const params = [];
+
+        if (data_inicio) {
+            params.push(`${data_inicio} 00:00:00`);
+            whereClause += ` AND d.criado_em >= $${params.length}::timestamp`;
+        }
+
+        if (data_fim) {
+            params.push(`${data_fim} 23:59:59.999`);
+            whereClause += ` AND d.criado_em <= $${params.length}::timestamp`;
+        }
+
+        const sql = `
+            SELECT 
+                d.id,
+                d.quantidade::float as quantidade,
+                d.criado_em,
+                TO_CHAR(d.criado_em, 'YYYY-MM') as mes_key,
+                TO_CHAR(d.criado_em, 'MM/YYYY') as mes_formatado,
+                e.id as estoque_id,
+                e.descricao as item_descricao,
+                e.unidade,
+                COALESCE(e.valor_unitario, 0)::float as valor_unitario,
+                (d.quantidade * COALESCE(e.valor_unitario, 0))::float as valor_total,
+                cc.id as cc_id,
+                cc.codigo as cc_codigo,
+                cc.nome as cc_nome,
+                cc.is_divisao,
+                CASE 
+                    WHEN cc.is_divisao THEN cc.id 
+                    ELSE COALESCE(pai.id, cc.id) 
+                END as divisao_id,
+                CASE 
+                    WHEN cc.is_divisao THEN cc.nome 
+                    ELSE COALESCE(pai.nome, 'Sem Divisão') 
+                END as divisao_nome
+            FROM dispensacoes d
+            JOIN estoque e ON d.estoque_id = e.id
+            JOIN centros_consumidores cc ON d.centro_consumidor_id = cc.id
+            LEFT JOIN centros_consumidores pai ON cc.divisao_id = pai.id
+            ${whereClause}
+            ORDER BY d.criado_em ASC
+        `;
+
+        const dispensacoes = await all(sql, params);
+
+        let totalGeral = 0;
+        const divisaoMap = new Map();
+        const ccMap = new Map();
+        const itemMap = new Map();
+        const mesMap = new Map();
+        const divMesMap = new Map();
+        const ccMesMap = new Map();
+        const mesesSet = new Set();
+        const mesesFormatados = new Map();
+
+        for (const d of dispensacoes) {
+            const vTotal = Number(d.valor_total) || 0;
+            const qtd = Number(d.quantidade) || 0;
+            totalGeral += vTotal;
+            mesesSet.add(d.mes_key);
+            mesesFormatados.set(d.mes_key, d.mes_formatado);
+
+            // Por Divisão
+            const divKey = d.divisao_id;
+            if (!divisaoMap.has(divKey)) {
+                divisaoMap.set(divKey, { id: d.divisao_id, nome: d.divisao_nome, valor_total: 0 });
+            }
+            divisaoMap.get(divKey).valor_total += vTotal;
+
+            // Por CC
+            const ccKey = d.cc_id;
+            if (!ccMap.has(ccKey)) {
+                ccMap.set(ccKey, { id: d.cc_id, nome: d.cc_nome, divisao_nome: d.divisao_nome, valor_total: 0 });
+            }
+            ccMap.get(ccKey).valor_total += vTotal;
+
+            // Por Item
+            const itKey = `${d.item_descricao}|${d.unidade}`;
+            if (!itemMap.has(itKey)) {
+                itemMap.set(itKey, { descricao: d.item_descricao, unidade: d.unidade, quantidade: 0, valor_total: 0 });
+            }
+            itemMap.get(itKey).quantidade += qtd;
+            itemMap.get(itKey).valor_total += vTotal;
+
+            // Evolução Mensal Total
+            mesMap.set(d.mes_key, (mesMap.get(d.mes_key) || 0) + vTotal);
+
+            // Evolução Mensal Divisões
+            if (!divMesMap.has(divKey)) {
+                divMesMap.set(divKey, { id: d.divisao_id, nome: d.divisao_nome, meses: new Map() });
+            }
+            const divMeses = divMesMap.get(divKey).meses;
+            divMeses.set(d.mes_key, (divMeses.get(d.mes_key) || 0) + vTotal);
+
+            // Evolução Mensal CCs
+            if (!ccMesMap.has(ccKey)) {
+                ccMesMap.set(ccKey, { id: d.cc_id, nome: d.cc_nome, meses: new Map() });
+            }
+            const ccMeses = ccMesMap.get(ccKey).meses;
+            ccMeses.set(d.mes_key, (ccMeses.get(d.mes_key) || 0) + vTotal);
+        }
+
+        const mesesOrdenados = Array.from(mesesSet).sort();
+
+        // 1. Por Divisão
+        const porDivisao = Array.from(divisaoMap.values()).map(div => ({
+            id: div.id,
+            nome: div.nome,
+            valor_total: Math.round(div.valor_total * 100) / 100,
+            percentual: totalGeral > 0 ? Math.round((div.valor_total / totalGeral) * 10000) / 100 : 0
+        })).sort((a, b) => b.valor_total - a.valor_total);
+
+        // 2. Por CC
+        const porCC = Array.from(ccMap.values()).map(cc => ({
+            id: cc.id,
+            nome: cc.nome,
+            divisao_nome: cc.divisao_nome,
+            valor_total: Math.round(cc.valor_total * 100) / 100,
+            percentual: totalGeral > 0 ? Math.round((cc.valor_total / totalGeral) * 10000) / 100 : 0
+        })).sort((a, b) => b.valor_total - a.valor_total);
+
+        // 3. Por Item
+        const porItem = Array.from(itemMap.values()).map(it => ({
+            descricao: it.descricao,
+            unidade: it.unidade,
+            quantidade: it.quantidade,
+            valor_total: Math.round(it.valor_total * 100) / 100
+        })).sort((a, b) => b.valor_total - a.valor_total);
+
+        // 4. Evolução Mensal
+        const evolucaoMensal = mesesOrdenados.map(mKey => ({
+            mes: mKey,
+            mes_formatado: mesesFormatados.get(mKey) || mKey,
+            valor_total: Math.round((mesMap.get(mKey) || 0) * 100) / 100
+        }));
+
+        // Séries de evolução por divisão
+        const evolucaoDivisoes = Array.from(divMesMap.values()).map(div => ({
+            id: div.id,
+            nome: div.nome,
+            valores: mesesOrdenados.map(mKey => Math.round((div.meses.get(mKey) || 0) * 100) / 100)
+        })).sort((a, b) => a.nome.localeCompare(b.nome));
+
+        // Séries de evolução por CC
+        const evolucaoCCs = Array.from(ccMesMap.values()).map(cc => ({
+            id: cc.id,
+            nome: cc.nome,
+            valores: mesesOrdenados.map(mKey => Math.round((cc.meses.get(mKey) || 0) * 100) / 100)
+        })).sort((a, b) => a.nome.localeCompare(b.nome));
+
+        res.json({
+            total_geral: Math.round(totalGeral * 100) / 100,
+            meses: mesesOrdenados.map(mKey => mesesFormatados.get(mKey) || mKey),
+            por_divisao: porDivisao,
+            por_cc: porCC,
+            por_item: porItem,
+            evolucao_mensal: evolucaoMensal,
+            evolucao_divisoes: evolucaoDivisoes,
+            evolucao_ccs: evolucaoCCs
+        });
+    } catch (error) {
+        console.error('Erro ao gerar relatório de consumo:', error);
+        res.status(500).json({ error: 'Erro ao gerar relatório de consumo.' });
+    }
+});
+
+// GET /consumo/export/excel - Exportação em 4 abas para Excel
+router.get('/consumo/export/excel', async (req, res) => {
+    try {
+        const { all } = getDb();
+        const { data_inicio, data_fim } = req.query;
+
+        let whereClause = 'WHERE 1=1';
+        const params = [];
+
+        if (data_inicio) {
+            params.push(`${data_inicio} 00:00:00`);
+            whereClause += ` AND d.criado_em >= $${params.length}::timestamp`;
+        }
+
+        if (data_fim) {
+            params.push(`${data_fim} 23:59:59.999`);
+            whereClause += ` AND d.criado_em <= $${params.length}::timestamp`;
+        }
+
+        const sql = `
+            SELECT 
+                d.quantidade::float as quantidade,
+                d.criado_em,
+                TO_CHAR(d.criado_em, 'YYYY-MM') as mes_key,
+                TO_CHAR(d.criado_em, 'MM/YYYY') as mes_formatado,
+                e.descricao as item_descricao,
+                e.unidade,
+                COALESCE(e.valor_unitario, 0)::float as valor_unitario,
+                (d.quantidade * COALESCE(e.valor_unitario, 0))::float as valor_total,
+                cc.id as cc_id,
+                cc.nome as cc_nome,
+                cc.is_divisao,
+                CASE 
+                    WHEN cc.is_divisao THEN cc.nome 
+                    ELSE COALESCE(pai.nome, 'Sem Divisão') 
+                END as divisao_nome
+            FROM dispensacoes d
+            JOIN estoque e ON d.estoque_id = e.id
+            JOIN centros_consumidores cc ON d.centro_consumidor_id = cc.id
+            LEFT JOIN centros_consumidores pai ON cc.divisao_id = pai.id
+            ${whereClause}
+            ORDER BY d.criado_em ASC
+        `;
+
+        const dispensacoes = await all(sql, params);
+
+        let totalGeral = 0;
+        const divisaoMap = new Map();
+        const ccMap = new Map();
+        const itemMap = new Map();
+        const mesMap = new Map();
+        const mesesSet = new Set();
+        const mesesFormatados = new Map();
+
+        for (const d of dispensacoes) {
+            const vTotal = Number(d.valor_total) || 0;
+            const qtd = Number(d.quantidade) || 0;
+            totalGeral += vTotal;
+            mesesSet.add(d.mes_key);
+            mesesFormatados.set(d.mes_key, d.mes_formatado);
+
+            // Divisão
+            const dNome = d.divisao_nome;
+            divisaoMap.set(dNome, (divisaoMap.get(dNome) || 0) + vTotal);
+
+            // CC
+            const ccKey = `${d.cc_nome}|${d.divisao_nome}`;
+            if (!ccMap.has(ccKey)) {
+                ccMap.set(ccKey, { cc_nome: d.cc_nome, divisao_nome: d.divisao_nome, valor_total: 0 });
+            }
+            ccMap.get(ccKey).valor_total += vTotal;
+
+            // Item
+            const itKey = `${d.item_descricao}|${d.unidade}`;
+            if (!itemMap.has(itKey)) {
+                itemMap.set(itKey, { descricao: d.item_descricao, unidade: d.unidade, quantidade: 0, valor_total: 0 });
+            }
+            itemMap.get(itKey).quantidade += qtd;
+            itemMap.get(itKey).valor_total += vTotal;
+
+            // Mensal
+            mesMap.set(d.mes_key, (mesMap.get(d.mes_key) || 0) + vTotal);
+        }
+
+        const workbook = new ExcelJS.Workbook();
+        workbook.creator = 'SIGA-ILSL';
+        workbook.created = new Date();
+
+        // 1. Sheet Por Divisão
+        const wsDiv = workbook.addWorksheet('Por Divisão');
+        wsDiv.columns = [
+            { header: 'Divisão', key: 'divisao', width: 35 },
+            { header: 'Valor Total (R$)', key: 'valor', width: 22 },
+            { header: '% do Total', key: 'percentual', width: 16 }
+        ];
+        const rowsDiv = Array.from(divisaoMap.entries())
+            .map(([divisao, valor]) => ({
+                divisao,
+                valor,
+                percentual: totalGeral > 0 ? (valor / totalGeral) : 0
+            }))
+            .sort((a, b) => b.valor - a.valor);
+        
+        rowsDiv.forEach(r => {
+            const row = wsDiv.addRow({
+                divisao: r.divisao,
+                valor: r.valor,
+                percentual: r.percentual
+            });
+            row.getCell(2).numFmt = '"R$" #,##0.00';
+            row.getCell(3).numFmt = '0.00%';
+        });
+
+        // 2. Sheet Por CC
+        const wsCC = workbook.addWorksheet('Por CC');
+        wsCC.columns = [
+            { header: 'Centro Consumidor', key: 'cc', width: 35 },
+            { header: 'Divisão', key: 'divisao', width: 30 },
+            { header: 'Valor Total (R$)', key: 'valor', width: 22 },
+            { header: '% do Total', key: 'percentual', width: 16 }
+        ];
+        const rowsCC = Array.from(ccMap.values())
+            .map(r => ({
+                ...r,
+                percentual: totalGeral > 0 ? (r.valor_total / totalGeral) : 0
+            }))
+            .sort((a, b) => b.valor_total - a.valor_total);
+
+        rowsCC.forEach(r => {
+            const row = wsCC.addRow({
+                cc: r.cc_nome,
+                divisao: r.divisao_nome,
+                valor: r.valor_total,
+                percentual: r.percentual
+            });
+            row.getCell(3).numFmt = '"R$" #,##0.00';
+            row.getCell(4).numFmt = '0.00%';
+        });
+
+        // 3. Sheet Por Item
+        const wsItem = workbook.addWorksheet('Por Item');
+        wsItem.columns = [
+            { header: 'Descrição do Item', key: 'descricao', width: 45 },
+            { header: 'Quantidade Dispensada', key: 'quantidade', width: 25 },
+            { header: 'Menor Unidade', key: 'unidade', width: 20 },
+            { header: 'Valor Total (R$)', key: 'valor', width: 22 }
+        ];
+        const rowsItem = Array.from(itemMap.values())
+            .sort((a, b) => b.valor_total - a.valor_total);
+
+        rowsItem.forEach(r => {
+            const row = wsItem.addRow({
+                descricao: r.descricao,
+                quantidade: r.quantidade,
+                unidade: r.unidade,
+                valor: r.valor_total
+            });
+            row.getCell(4).numFmt = '"R$" #,##0.00';
+        });
+
+        // 4. Sheet Evolução Mensal
+        const wsMes = workbook.addWorksheet('Evolução Mensal');
+        wsMes.columns = [
+            { header: 'Mês', key: 'mes', width: 20 },
+            { header: 'Valor Total (R$)', key: 'valor', width: 22 }
+        ];
+        const mesesOrdenados = Array.from(mesesSet).sort();
+        mesesOrdenados.forEach(mKey => {
+            const row = wsMes.addRow({
+                mes: mesesFormatados.get(mKey) || mKey,
+                valor: mesMap.get(mKey) || 0
+            });
+            row.getCell(2).numFmt = '"R$" #,##0.00';
+        });
+
+        // Estilização dos cabeçalhos em todas as planilhas
+        [wsDiv, wsCC, wsItem, wsMes].forEach(ws => {
+            const headerRow = ws.getRow(1);
+            headerRow.font = { bold: true, color: { argb: 'FFFFFFFF' } };
+            headerRow.fill = {
+                type: 'pattern',
+                pattern: 'solid',
+                fgColor: { argb: 'FF1F2937' }
+            };
+            headerRow.alignment = { vertical: 'middle', horizontal: 'center' };
+        });
+
+        const filename = `relatorio_consumo_ilsl_${Date.now()}.xlsx`;
+        res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+        res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+
+        await workbook.xlsx.write(res);
+        res.end();
+    } catch (error) {
+        console.error('Erro ao exportar relatório de consumo:', error);
+        res.status(500).json({ error: 'Erro ao exportar relatório de consumo.' });
+    }
+});
+
 module.exports = router;
 
 

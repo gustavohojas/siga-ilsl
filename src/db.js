@@ -137,6 +137,7 @@ async function initDb() {
             natureza_despesa TEXT,
             quantidade NUMERIC NOT NULL,
             unidade TEXT NOT NULL,
+            valor_unitario NUMERIC DEFAULT 0,
             quantidade_recebida NUMERIC DEFAULT 0,
             garantia BOOLEAN DEFAULT FALSE,
             data_garantia DATE
@@ -170,6 +171,7 @@ async function initDb() {
             perecivel BOOLEAN DEFAULT FALSE,
             quantidade NUMERIC NOT NULL,
             unidade TEXT,
+            valor_unitario NUMERIC DEFAULT 0,
             validade TEXT,
             nota_fiscal TEXT,
             data_entrega TEXT,
@@ -188,6 +190,7 @@ async function initDb() {
             perecivel BOOLEAN DEFAULT FALSE,
             unidade TEXT NOT NULL,
             quantidade_atual NUMERIC NOT NULL,
+            valor_unitario NUMERIC DEFAULT 0,
             validade TEXT,
             natureza_despesa TEXT,
             garantia BOOLEAN DEFAULT FALSE,
@@ -199,7 +202,18 @@ async function initDb() {
             id SERIAL PRIMARY KEY,
             codigo TEXT UNIQUE NOT NULL,
             nome TEXT NOT NULL,
+            is_divisao BOOLEAN DEFAULT FALSE,
+            divisao_id INTEGER REFERENCES centros_consumidores(id),
             criado_em TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+        );
+
+        CREATE TABLE IF NOT EXISTS catalogo_itens (
+            id SERIAL PRIMARY KEY,
+            codigo_siafisico TEXT UNIQUE NOT NULL,
+            codigo_compras TEXT NOT NULL,
+            descricao TEXT NOT NULL,
+            criado_em TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+            atualizado_em TIMESTAMP WITH TIME ZONE DEFAULT NOW()
         );
 
         CREATE TABLE IF NOT EXISTS guias_dispensacao (
@@ -246,12 +260,17 @@ async function initDb() {
     await pool.query(`
         ALTER TABLE itens_empenho ADD COLUMN IF NOT EXISTS garantia BOOLEAN DEFAULT FALSE;
         ALTER TABLE itens_empenho ADD COLUMN IF NOT EXISTS data_garantia DATE;
+        ALTER TABLE itens_empenho ADD COLUMN IF NOT EXISTS valor_unitario NUMERIC DEFAULT 0;
         ALTER TABLE itens_recebimento ADD COLUMN IF NOT EXISTS garantia BOOLEAN DEFAULT FALSE;
         ALTER TABLE itens_recebimento ADD COLUMN IF NOT EXISTS data_garantia DATE;
         ALTER TABLE itens_recebimento ADD COLUMN IF NOT EXISTS lote TEXT;
+        ALTER TABLE itens_recebimento ADD COLUMN IF NOT EXISTS valor_unitario NUMERIC DEFAULT 0;
         ALTER TABLE estoque ADD COLUMN IF NOT EXISTS garantia BOOLEAN DEFAULT FALSE;
         ALTER TABLE estoque ADD COLUMN IF NOT EXISTS data_garantia DATE;
         ALTER TABLE estoque ADD COLUMN IF NOT EXISTS lote TEXT;
+        ALTER TABLE estoque ADD COLUMN IF NOT EXISTS valor_unitario NUMERIC DEFAULT 0;
+        ALTER TABLE centros_consumidores ADD COLUMN IF NOT EXISTS is_divisao BOOLEAN DEFAULT FALSE;
+        ALTER TABLE centros_consumidores ADD COLUMN IF NOT EXISTS divisao_id INTEGER REFERENCES centros_consumidores(id);
         ALTER TABLE dispensacoes ADD COLUMN IF NOT EXISTS lote TEXT;
         CREATE TABLE IF NOT EXISTS guias_dispensacao (
             id SERIAL PRIMARY KEY,
@@ -273,6 +292,14 @@ async function initDb() {
             justificativa TEXT NOT NULL,
             pdf_conteudo BYTEA,
             criado_em TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+        );
+        CREATE TABLE IF NOT EXISTS catalogo_itens (
+            id SERIAL PRIMARY KEY,
+            codigo_siafisico TEXT UNIQUE NOT NULL,
+            codigo_compras TEXT NOT NULL,
+            descricao TEXT NOT NULL,
+            criado_em TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+            atualizado_em TIMESTAMP WITH TIME ZONE DEFAULT NOW()
         );
     `);
 
@@ -334,6 +361,113 @@ async function initDb() {
         await defaultInterface.run(
             'INSERT INTO configuracoes_sistema (chave, valor) VALUES ($1, $2) ON CONFLICT (chave) DO NOTHING',
             ['seed_centros_realizado', 'true']
+        );
+    }
+
+    // 3. Reestruturação e Carga das 7 Divisões e 21 Centros Consumidores
+    const seedDivisoesDone = await defaultInterface.get('SELECT valor FROM configuracoes_sistema WHERE chave = $1', ['reestruturacao_divisoes_v1']);
+    if (!seedDivisoesDone) {
+        // As 7 Divisões oficiais
+        const divisoes = [
+            { codigo: 'DIV-001', nome: 'Administração' },
+            { codigo: 'DIV-002', nome: 'Dermatologia' },
+            { codigo: 'DIV-003', nome: 'Diretoria Técnica' },
+            { codigo: 'DIV-004', nome: 'Enfermagem' },
+            { codigo: 'DIV-005', nome: 'Pesquisa e Ensino' },
+            { codigo: 'DIV-006', nome: 'Reabilitação' },
+            { codigo: 'DIV-007', nome: 'Serviços Técnicos Auxiliares' }
+        ];
+
+        for (const div of divisoes) {
+            const existing = await defaultInterface.get('SELECT id FROM centros_consumidores WHERE codigo = $1', [div.codigo]);
+            if (!existing) {
+                await defaultInterface.run(
+                    'INSERT INTO centros_consumidores (codigo, nome, is_divisao, divisao_id) VALUES ($1, $2, TRUE, NULL)',
+                    [div.codigo, div.nome]
+                );
+            } else {
+                await defaultInterface.run(
+                    'UPDATE centros_consumidores SET nome = $1, is_divisao = TRUE, divisao_id = NULL WHERE codigo = $2',
+                    [div.nome, div.codigo]
+                );
+            }
+        }
+
+        // Mapear nome da divisão -> id
+        const divRows = await defaultInterface.all('SELECT id, nome FROM centros_consumidores WHERE is_divisao = TRUE');
+        const divMap = {};
+        for (const d of divRows) {
+            divMap[d.nome] = d.id;
+        }
+
+        // Remover os antigos CCs promovidos a divisão que não possuem dispensações nem guias
+        await defaultInterface.run(`
+            DELETE FROM centros_consumidores 
+            WHERE is_divisao = FALSE 
+              AND nome IN ('Diretoria Técnica', 'Divisão de Dermatologia', 'Enfermagem', 'Reabilitação')
+              AND id NOT IN (SELECT DISTINCT centro_consumidor_id FROM dispensacoes)
+              AND id NOT IN (SELECT DISTINCT centro_consumidor_id FROM guias_dispensacao)
+        `);
+
+        // Os 21 Centros Consumidores oficiais e seus vínculos
+        const ccs = [
+            { codigo: 'CC-001', nome: 'Ambulatório', divisao: 'Enfermagem' },
+            { codigo: 'CC-002', nome: 'Análises Clínicas', divisao: 'Dermatologia' },
+            { codigo: 'CC-003', nome: 'Biblioteca', divisao: 'Pesquisa e Ensino' },
+            { codigo: 'CC-004', nome: 'Conservação e Limpeza', divisao: 'Administração' },
+            { codigo: 'CC-005', nome: 'Educação Continuada', divisao: 'Enfermagem' },
+            { codigo: 'CC-006', nome: 'Farmácia', divisao: 'Serviços Técnicos Auxiliares' },
+            { codigo: 'CC-007', nome: 'Finanças', divisao: 'Administração' },
+            { codigo: 'CC-008', nome: 'Fisioterapia', divisao: 'Reabilitação' },
+            { codigo: 'CC-009', nome: 'Imunologia', divisao: 'Pesquisa e Ensino' },
+            { codigo: 'CC-010', nome: 'Manutenção', divisao: 'Administração' },
+            { codigo: 'CC-011', nome: 'Material e Patrimônio', divisao: 'Administração' },
+            { codigo: 'CC-012', nome: 'Micologia', divisao: 'Pesquisa e Ensino' },
+            { codigo: 'CC-013', nome: 'Nutrição', divisao: 'Serviços Técnicos Auxiliares' },
+            { codigo: 'CC-014', nome: 'Patologia', divisao: 'Pesquisa e Ensino' },
+            { codigo: 'CC-015', nome: 'Radiologia', divisao: 'Dermatologia' },
+            { codigo: 'CC-016', nome: 'SAME', divisao: 'Serviços Técnicos Auxiliares' },
+            { codigo: 'CC-017', nome: 'Seção de Pessoal', divisao: 'Administração' },
+            { codigo: 'CC-018', nome: 'Sub Frota', divisao: 'Administração' },
+            { codigo: 'CC-019', nome: 'Suprimento', divisao: 'Administração' },
+            { codigo: 'CC-020', nome: 'Treinamento e Ensino', divisao: 'Pesquisa e Ensino' },
+            { codigo: 'CC-021', nome: 'Unidade de Internação', divisao: 'Enfermagem' }
+        ];
+
+        // Adicionar prefixo temporário nos códigos antigos de CC para evitar violação de UNIQUE ao reatribuir CC-001..CC-021
+        await defaultInterface.run("UPDATE centros_consumidores SET codigo = 'TMP_' || codigo WHERE is_divisao = FALSE AND codigo NOT LIKE 'TMP_%'");
+
+        for (const cc of ccs) {
+            const divId = divMap[cc.divisao] || null;
+            const existingByName = await defaultInterface.get(
+                'SELECT id FROM centros_consumidores WHERE is_divisao = FALSE AND nome = $1',
+                [cc.nome]
+            );
+
+            if (existingByName) {
+                await defaultInterface.run(
+                    'UPDATE centros_consumidores SET codigo = $1, is_divisao = FALSE, divisao_id = $2 WHERE id = $3',
+                    [cc.codigo, divId, existingByName.id]
+                );
+            } else {
+                await defaultInterface.run(
+                    'INSERT INTO centros_consumidores (codigo, nome, is_divisao, divisao_id) VALUES ($1, $2, FALSE, $3)',
+                    [cc.codigo, cc.nome, divId]
+                );
+            }
+        }
+
+        // Remover CCs temporários que não tenham dispensações
+        await defaultInterface.run(`
+            DELETE FROM centros_consumidores 
+            WHERE codigo LIKE 'TMP_%' 
+              AND id NOT IN (SELECT DISTINCT centro_consumidor_id FROM dispensacoes)
+              AND id NOT IN (SELECT DISTINCT centro_consumidor_id FROM guias_dispensacao)
+        `);
+
+        await defaultInterface.run(
+            'INSERT INTO configuracoes_sistema (chave, valor) VALUES ($1, $2) ON CONFLICT (chave) DO NOTHING',
+            ['reestruturacao_divisoes_v1', 'true']
         );
     }
 

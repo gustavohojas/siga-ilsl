@@ -109,9 +109,10 @@ router.post('/empenho', async (req, res) => {
                 const loteFinal = item.lote && String(item.lote).trim() ? String(item.lote).trim() : null;
 
                 // Cria item_recebimento
+                const valorUnitario = parseFloat(itemEmpenho.valor_unitario) || 0;
                 const infoIR = await tx.run(`
-                    INSERT INTO itens_recebimento (recebimento_id, item_empenho_id, descricao, codigo_barras, lote, perecivel, quantidade, unidade, validade, nota_fiscal, data_entrega, garantia, data_garantia)
-                    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+                    INSERT INTO itens_recebimento (recebimento_id, item_empenho_id, descricao, codigo_barras, lote, perecivel, quantidade, unidade, valor_unitario, validade, nota_fiscal, data_entrega, garantia, data_garantia)
+                    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
                 `, [
                     recebimento_id,
                     item.item_empenho_id,
@@ -121,6 +122,7 @@ router.post('/empenho', async (req, res) => {
                     isPerecivel,
                     item.quantidade,
                     itemEmpenho.unidade,
+                    valorUnitario,
                     validadeFinal,
                     item.nota_fiscal || nota_fiscal || null,
                     item.data_entrega || data_entrega || null,
@@ -153,13 +155,13 @@ router.post('/empenho', async (req, res) => {
 
                 if (estoqueExistente) {
                     await tx.run(
-                        'UPDATE estoque SET quantidade_atual = quantidade_atual + $1 WHERE id = $2',
-                        [item.quantidade, estoqueExistente.id]
+                        'UPDATE estoque SET quantidade_atual = quantidade_atual + $1, valor_unitario = CASE WHEN valor_unitario = 0 OR valor_unitario IS NULL THEN $3 ELSE valor_unitario END WHERE id = $2',
+                        [item.quantidade, estoqueExistente.id, valorUnitario]
                     );
                 } else {
                     await tx.run(`
-                        INSERT INTO estoque (item_recebimento_id, codigo_siafisico, codigo_compras, descricao, codigo_barras, lote, perecivel, unidade, quantidade_atual, validade, natureza_despesa, garantia, data_garantia)
-                        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+                        INSERT INTO estoque (item_recebimento_id, codigo_siafisico, codigo_compras, descricao, codigo_barras, lote, perecivel, unidade, quantidade_atual, valor_unitario, validade, natureza_despesa, garantia, data_garantia)
+                        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
                     `, [
                         item_recebimento_id,
                         itemEmpenho.codigo_siafisico,
@@ -170,6 +172,7 @@ router.post('/empenho', async (req, res) => {
                         isPerecivel,
                         itemEmpenho.unidade,
                         item.quantidade,
+                        valorUnitario,
                         validadeFinal,
                         itemEmpenho.natureza_despesa,
                         isGarantia,
@@ -227,24 +230,39 @@ router.post('/doacao', async (req, res) => {
             );
             const recebimento_id = infoRecebimento.lastInsertRowid;
 
+            for (let idx = 0; idx < itens.length; idx++) {
+                const item = itens[idx];
+                if (!item.codigo_siafisico || !String(item.codigo_siafisico).trim()) {
+                    throw new Error(`Cód. Siafísico é obrigatório para o item #${idx + 1}.`);
+                }
+                if (!item.codigo_compras || !String(item.codigo_compras).trim()) {
+                    throw new Error(`Cód. Compras é obrigatório para o item #${idx + 1}.`);
+                }
+            }
+
             for (const item of itens) {
                 const isPerecivel = Boolean(item.perecivel);
                 const validadeFinal = isPerecivel ? (item.validade || null) : null;
                 const isGarantia = Boolean(item.garantia);
                 const garantiaFinal = isGarantia ? (item.data_garantia || null) : null;
                 const loteFinal = item.lote && String(item.lote).trim() ? String(item.lote).trim() : null;
+                const valorUnitario = parseFloat(item.valor_unitario) || 0;
+                const siaf = String(item.codigo_siafisico).trim();
+                const comp = String(item.codigo_compras).trim();
+                const desc = String(item.descricao).trim();
 
                 const infoIR = await tx.run(`
-                    INSERT INTO itens_recebimento (recebimento_id, descricao, codigo_barras, lote, perecivel, quantidade, unidade, validade, nota_fiscal, data_entrega, garantia, data_garantia)
-                    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+                    INSERT INTO itens_recebimento (recebimento_id, descricao, codigo_barras, lote, perecivel, quantidade, unidade, valor_unitario, validade, nota_fiscal, data_entrega, garantia, data_garantia)
+                    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
                 `, [
                     recebimento_id,
-                    item.descricao,
+                    desc,
                     item.codigo_barras || null,
                     loteFinal,
                     isPerecivel,
                     item.quantidade,
                     item.unidade,
+                    valorUnitario,
                     validadeFinal,
                     String(nota_fiscal).trim(),
                     data_entrega || null,
@@ -252,6 +270,23 @@ router.post('/doacao', async (req, res) => {
                     garantiaFinal
                 ]);
                 const item_recebimento_id = infoIR.lastInsertRowid;
+
+                // Auto-registro no catálogo
+                const catExist = await tx.get(
+                    'SELECT id, descricao FROM catalogo_itens WHERE UPPER(TRIM(codigo_siafisico)) = UPPER(TRIM($1))',
+                    [siaf]
+                );
+                if (!catExist) {
+                    await tx.run(
+                        'INSERT INTO catalogo_itens (codigo_siafisico, codigo_compras, descricao) VALUES ($1, $2, $3)',
+                        [siaf, comp, desc]
+                    );
+                } else if (item.substituir_catalogo) {
+                    await tx.run(
+                        'UPDATE catalogo_itens SET codigo_compras = $1, descricao = $2, atualizado_em = NOW() WHERE id = $3',
+                        [comp, desc, catExist.id]
+                    );
+                }
 
                 // Verifica estoque existente considerando validade, código, garantia e lote
                 const estoqueExistente = await tx.get(`
@@ -262,7 +297,7 @@ router.post('/doacao', async (req, res) => {
                     AND data_garantia IS NOT DISTINCT FROM $4
                     AND lote IS NOT DISTINCT FROM $5
                 `, [
-                    item.descricao, 
+                    desc, 
                     validadeFinal,
                     item.codigo_barras || null,
                     garantiaFinal,
@@ -271,21 +306,24 @@ router.post('/doacao', async (req, res) => {
 
                 if (estoqueExistente) {
                     await tx.run(
-                        'UPDATE estoque SET quantidade_atual = quantidade_atual + $1 WHERE id = $2',
-                        [item.quantidade, estoqueExistente.id]
+                        'UPDATE estoque SET quantidade_atual = quantidade_atual + $1, valor_unitario = CASE WHEN valor_unitario = 0 OR valor_unitario IS NULL THEN $3 ELSE valor_unitario END WHERE id = $2',
+                        [item.quantidade, estoqueExistente.id, valorUnitario]
                     );
                 } else {
                     await tx.run(`
-                        INSERT INTO estoque (item_recebimento_id, descricao, codigo_barras, lote, perecivel, unidade, quantidade_atual, validade, natureza_despesa, garantia, data_garantia)
-                        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+                        INSERT INTO estoque (item_recebimento_id, codigo_siafisico, codigo_compras, descricao, codigo_barras, lote, perecivel, unidade, quantidade_atual, valor_unitario, validade, natureza_despesa, garantia, data_garantia)
+                        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
                     `, [
                         item_recebimento_id,
-                        item.descricao,
+                        siaf,
+                        comp,
+                        desc,
                         item.codigo_barras || null,
                         loteFinal,
                         isPerecivel,
                         item.unidade,
                         item.quantidade,
+                        valorUnitario,
                         validadeFinal,
                         'DOACAO',
                         isGarantia,

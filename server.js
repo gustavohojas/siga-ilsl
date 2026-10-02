@@ -21,6 +21,7 @@ async function startServer() {
     app.use('/api/centros-consumidores', require('./src/routes/centroConsumidor'));
     app.use('/api/dispensacoes', require('./src/routes/dispensacao'));
     app.use('/api/relatorios', require('./src/routes/relatorios'));
+    app.use('/api/catalogo', require('./src/routes/catalogo'));
 
     // SPA fallback: servir index.html para rotas não-API
     app.get('*', (req, res) => {

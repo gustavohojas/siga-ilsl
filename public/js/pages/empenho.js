@@ -198,6 +198,7 @@ export async function renderEmpenho(container) {
                                 const prazoFormatado = emp.prazo ? emp.prazo.split('-').reverse().join('/') : '-';
 
                                 let itensHtml = '';
+                                let totalNE = 0;
                                 if (emp.itens && emp.itens.length > 0) {
                                     itensHtml = `
                                         <table class="table" style="margin-top: 1rem;">
@@ -207,7 +208,9 @@ export async function renderEmpenho(container) {
                                                     <th>Cód. Siafísico</th>
                                                     <th>Cód. Compras</th>
                                                     <th>Nat. Despesa</th>
+                                                    <th>Valor Unit. (R$)</th>
                                                     <th>Quantidade</th>
+                                                    <th>Total do Item</th>
                                                     <th>Recebido</th>
                                                     <th>Perecível</th>
                                                     <th>Garantia</th>
@@ -215,6 +218,10 @@ export async function renderEmpenho(container) {
                                             </thead>
                                             <tbody>
                                                 ${emp.itens.map(it => {
+                                                    const vUnit = Number(it.valor_unitario) || 0;
+                                                    const qtd = Number(it.quantidade) || 0;
+                                                    const itemTot = vUnit * qtd;
+                                                    totalNE += itemTot;
                                                     const dataGarFmt = it.data_garantia ? (typeof it.data_garantia === 'string' ? it.data_garantia.split('T')[0].split('-').reverse().join('/') : new Date(it.data_garantia).toLocaleDateString('pt-BR')) : '';
                                                     return `
                                                     <tr>
@@ -222,13 +229,21 @@ export async function renderEmpenho(container) {
                                                         <td>${it.codigo_siafisico || '-'}</td>
                                                         <td>${it.codigo_compras || '-'}</td>
                                                         <td>${it.natureza_despesa || '-'}</td>
+                                                        <td>${vUnit.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</td>
                                                         <td>${it.quantidade} ${it.unidade}</td>
+                                                        <td style="font-weight: 600; color: #10b981;">${itemTot.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</td>
                                                         <td><span class="badge ${it.quantidade_recebida >= it.quantidade ? 'badge-success' : 'badge-warning'}">${it.quantidade_recebida || 0} / ${it.quantidade}</span></td>
                                                         <td>${it.perecivel ? '<span class="badge badge-warning">Sim</span>' : '<span class="badge badge-role">Não</span>'}</td>
                                                         <td>${it.garantia ? ('<span class="badge badge-info">Sim' + (dataGarFmt ? ` (${dataGarFmt})` : '') + '</span>') : '<span class="badge badge-role">Não</span>'}</td>
                                                     </tr>
                                                 `; }).join('')}
                                             </tbody>
+                                            <tfoot>
+                                                <tr style="background: rgba(255,255,255,0.05); font-weight: bold;">
+                                                    <td colspan="6" style="text-align: right; padding-right: 1rem;">VALOR TOTAL DA NOTA:</td>
+                                                    <td colspan="4" style="color: #10b981; font-size: 1.05rem;">${totalNE.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</td>
+                                                </tr>
+                                            </tfoot>
                                         </table>
                                     `;
                                 } else {
@@ -282,7 +297,44 @@ export async function renderEmpenho(container) {
         }
     };
 
-    // Criar um card de item espaçoso, elegante e totalmente legível
+    // Modal de conflito de descrição com o catálogo
+    const promptConflitoDescricao = (descOriginal, descNova) => {
+        return new Promise((resolve) => {
+            const modalConflito = document.createElement('div');
+            modalConflito.className = 'modal-overlay';
+            modalConflito.style.display = 'flex';
+            modalConflito.style.zIndex = '99999';
+            modalConflito.innerHTML = `
+                <div class="modal" style="background:#0f172a; border: 1px solid rgba(255,255,255,0.2); box-shadow: 0 25px 60px rgba(0,0,0,0.95); border-radius: 12px; max-width: 500px; padding: 1.5rem; color: #f1f5f9;">
+                    <h4 style="margin: 0 0 1rem; color: #f59e0b; display: flex; align-items: center; gap: 0.5rem; font-size: 1.1rem;">
+                        ⚠️ Conflito no Catálogo de Itens
+                    </h4>
+                    <p style="margin-bottom: 0.5rem; font-size: 0.9rem; color: #94a3b8;">Este código SIAFÍSICO já está cadastrado no sistema como:</p>
+                    <div style="background: rgba(255, 255, 255, 0.06); padding: 0.75rem 1rem; border-radius: 8px; border-left: 4px solid #6366f1; font-weight: 600; margin-bottom: 1rem; color: #fff;">
+                        "${descOriginal}"
+                    </div>
+                    <p style="margin-bottom: 1.5rem; font-size: 0.9rem; color: #94a3b8;">
+                        Deseja substituir a descrição no catálogo pela nova digitada (<strong>"${descNova}"</strong>)?
+                    </p>
+                    <div style="display: flex; justify-content: flex-end; gap: 0.75rem;">
+                        <button type="button" class="btn btn-outline" id="btn-conflito-manter">Manter Original</button>
+                        <button type="button" class="btn btn-primary" id="btn-conflito-substituir">Substituir</button>
+                    </div>
+                </div>
+            `;
+            document.body.appendChild(modalConflito);
+            modalConflito.querySelector('#btn-conflito-manter').onclick = () => {
+                modalConflito.remove();
+                resolve(false);
+            };
+            modalConflito.querySelector('#btn-conflito-substituir').onclick = () => {
+                modalConflito.remove();
+                resolve(true);
+            };
+        });
+    };
+
+    // Criar um card de item espaçoso, elegante e com a ordem de campos exigida
     let itemCount = 0;
     const createItemCard = () => {
         itemCount++;
@@ -304,38 +356,38 @@ export async function renderEmpenho(container) {
                 </button>
             </div>
             
-            <!-- LINHA 1: DESCRIÇÃO AMPLA E NATUREZA DE DESPESA -->
-            <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 1rem;">
+            <!-- LINHA 1: 1. CÓD. SIAFÍSICO | 2. CÓD. COMPRAS | 3. DESCRIÇÃO -->
+            <div style="display: grid; grid-template-columns: 1fr 1fr 2fr; gap: 1rem; margin-bottom: 1rem;">
                 <div class="form-group mb-0">
-                    <label class="form-label">Nome / Descrição Completa do Produto *</label>
-                    <input type="text" class="form-control item-desc" placeholder="Ex: Luva Cirúrgica Estéril Tam. M" required>
+                    <label class="form-label">1. Cód. Siafísico *</label>
+                    <input type="text" class="form-control item-siafisico" placeholder="Ex: 123456" required autocomplete="off">
+                    <small class="text-muted" style="font-size: 0.75rem;">Operador digita primeiro</small>
                 </div>
                 <div class="form-group mb-0">
-                    <label class="form-label">Natureza de Despesa</label>
-                    <select class="form-control item-nat">
-                        <option value="">Selecione a categoria...</option>
-                        ${natOptions}
-                    </select>
+                    <label class="form-label">2. Cód. Compras *</label>
+                    <input type="text" class="form-control item-compras" placeholder="Ex: 654321" required autocomplete="off">
+                    <div class="item-compras-hint" style="display:none; font-size: 0.75rem; color: #818cf8; margin-top: 4px; max-height: 80px; overflow-y: auto;"></div>
+                </div>
+                <div class="form-group mb-0">
+                    <label class="form-label">3. Nome / Descrição Completa *</label>
+                    <input type="text" class="form-control item-desc" placeholder="Auto-preenchido ou digite o nome" required>
                 </div>
             </div>
 
-            <!-- LINHA 2: CÓDIGOS, QUANTIDADE, UNIDADE E PERECÍVEL -->
-            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 1rem; align-items: end;">
+            <!-- LINHA 2: VALOR UNITÁRIO, QUANTIDADE, MENOR UNIDADE E TOTAL -->
+            <div style="display: grid; grid-template-columns: 1.2fr 1fr 1.5fr 1.3fr; gap: 1rem; align-items: end; margin-bottom: 1rem;">
                 <div class="form-group mb-0">
-                    <label class="form-label">Cód. Siafísico *</label>
-                    <input type="text" class="form-control item-siafisico" placeholder="Ex: 123456" required>
-                </div>
-                <div class="form-group mb-0">
-                    <label class="form-label">Cód. Compras *</label>
-                    <input type="text" class="form-control item-compras" placeholder="Ex: 654321" required>
+                    <label class="form-label">Valor Unitário (R$) *</label>
+                    <input type="number" class="form-control item-vunit" placeholder="0,00" required min="0" step="0.0001" value="0.00">
+                    <small class="text-muted" style="font-size: 0.72rem;">Menor un. dispensação</small>
                 </div>
                 <div class="form-group mb-0">
                     <label class="form-label">Quantidade *</label>
                     <input type="number" class="form-control item-qtd" placeholder="Qtd" required min="1" step="any" value="1">
                 </div>
                 <div class="form-group mb-0">
-                    <label class="form-label" title="Informe a unidade em que o produto será dispensado aos centros consumidores">Menor un. de dispensação * <i class="fas fa-info-circle text-muted" title="Informe a unidade em que o produto será dispensado aos centros consumidores" style="cursor:help; font-size:0.85rem;"></i></label>
-                    <select class="form-control item-un" required title="Informe a unidade em que o produto será dispensado aos centros consumidores">
+                    <label class="form-label" title="Informe a unidade em que o produto será dispensado aos centros consumidores">Menor un. dispensação *</label>
+                    <select class="form-control item-un" required>
                         <option value="Unidade">Unidade</option>
                         <option value="Caixa">Caixa</option>
                         <option value="Pacote">Pacote</option>
@@ -355,6 +407,21 @@ export async function renderEmpenho(container) {
                         <option value="Outros">Outros</option>
                     </select>
                 </div>
+                <div class="form-group mb-0" style="padding: 0.5rem; background: rgba(16, 185, 129, 0.08); border-radius: 8px; border: 1px solid rgba(16, 185, 129, 0.2); text-align: center;">
+                    <label class="form-label" style="margin-bottom: 2px; color: #10b981;">Total do Item</label>
+                    <div class="item-total-display" style="font-weight: 700; font-size: 1.05rem; color: #10b981;">R$ 0,00</div>
+                </div>
+            </div>
+
+            <!-- LINHA 3: CATEGORIA, PERECÍVEL E GARANTIA -->
+            <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 1rem; align-items: center;">
+                <div class="form-group mb-0">
+                    <label class="form-label">Natureza de Despesa</label>
+                    <select class="form-control item-nat">
+                        <option value="">Selecione a categoria...</option>
+                        ${natOptions}
+                    </select>
+                </div>
                 <div class="form-group mb-0">
                     <label class="form-label">Perecível?</label>
                     <select class="form-control item-per" required>
@@ -364,7 +431,7 @@ export async function renderEmpenho(container) {
                 </div>
             </div>
 
-            <!-- LINHA 3: CONTROLE DE GARANTIA -->
+            <!-- LINHA 4: CONTROLE DE GARANTIA -->
             <div style="margin-top: 0.75rem; padding: 0.75rem 1rem; background: rgba(99, 102, 241, 0.05); border-radius: 8px; border: 1px solid rgba(99, 102, 241, 0.15); display: flex; align-items: center; gap: 1.5rem; flex-wrap: wrap;">
                 <label style="display: inline-flex; align-items: center; gap: 0.5rem; margin: 0; cursor: pointer; color: #fff; font-weight: 500;">
                     <input type="checkbox" class="item-gar" style="width: 1.15rem; height: 1.15rem; accent-color: var(--accent-primary);">
@@ -373,10 +440,86 @@ export async function renderEmpenho(container) {
             </div>
         `;
 
+        const siafisicoInput = card.querySelector('.item-siafisico');
+        const comprasInput = card.querySelector('.item-compras');
+        const descInput = card.querySelector('.item-desc');
+        const vunitInput = card.querySelector('.item-vunit');
+        const qtdInput = card.querySelector('.item-qtd');
+        const totalDisplay = card.querySelector('.item-total-display');
+        const comprasHint = card.querySelector('.item-compras-hint');
+
+        // Cálculo em tempo real do total do item
+        const recalcularTotal = () => {
+            const v = parseFloat(vunitInput.value) || 0;
+            const q = parseFloat(qtdInput.value) || 0;
+            const total = v * q;
+            totalDisplay.textContent = total.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+        };
+        vunitInput.addEventListener('input', recalcularTotal);
+        qtdInput.addEventListener('input', recalcularTotal);
+
+        // Auto-preenchimento ao digitar Código SIAFÍSICO
+        siafisicoInput.addEventListener('blur', async () => {
+            const siafVal = siafisicoInput.value.trim();
+            if (!siafVal) return;
+            try {
+                const itemCat = await api.get('/catalogo?siafisico=' + encodeURIComponent(siafVal));
+                if (itemCat && itemCat.codigo_siafisico) {
+                    comprasInput.value = itemCat.codigo_compras || '';
+                    descInput.value = itemCat.descricao || '';
+                    card.dataset.catalogoOriginalDesc = itemCat.descricao || '';
+                    card.dataset.catalogoId = itemCat.id;
+                    card.dataset.substituirCatalogo = 'false';
+                    comprasHint.style.display = 'none';
+                    showToast({ message: 'Item localizado no catálogo! Código compras e descrição preenchidos.', type: 'info', duration: 2500 });
+                }
+            } catch (err) {
+                card.dataset.catalogoOriginalDesc = '';
+                card.dataset.catalogoId = '';
+                card.dataset.substituirCatalogo = 'false';
+            }
+        });
+
+        // Consulta de referência ao digitar Código Compras
+        comprasInput.addEventListener('input', async () => {
+            const compVal = comprasInput.value.trim();
+            if (!compVal || compVal.length < 3 || (card.dataset.catalogoOriginalDesc && descInput.value)) {
+                comprasHint.style.display = 'none';
+                return;
+            }
+            try {
+                const itensCat = await api.get('/catalogo?compras=' + encodeURIComponent(compVal));
+                if (Array.isArray(itensCat) && itensCat.length > 0) {
+                    comprasHint.style.display = 'block';
+                    comprasHint.innerHTML = `<strong>${itensCat.length} item(ns) encontrado(s) com este Cód. Compras:</strong><br>` + 
+                        itensCat.map(it => `• Siafísico <strong>${it.codigo_siafisico}</strong>: ${it.descricao}`).join('<br>');
+                } else {
+                    comprasHint.style.display = 'none';
+                }
+            } catch (err) {
+                comprasHint.style.display = 'none';
+            }
+        });
+
+        // Conflito de descrição caso altere um item já existente no catálogo
+        descInput.addEventListener('blur', async () => {
+            const descNova = descInput.value.trim();
+            const descOriginal = card.dataset.catalogoOriginalDesc;
+            if (descOriginal && descNova && descNova.toUpperCase() !== descOriginal.toUpperCase()) {
+                const substituir = await promptConflitoDescricao(descOriginal, descNova);
+                if (substituir) {
+                    card.dataset.substituirCatalogo = 'true';
+                    showToast({ message: 'Descrição será atualizada no catálogo ao salvar.', type: 'info' });
+                } else {
+                    descInput.value = descOriginal;
+                    card.dataset.substituirCatalogo = 'false';
+                }
+            }
+        });
+
         card.querySelector('.btn-remove-item').addEventListener('click', () => {
             if (itensContainer.children.length > 1) {
                 card.remove();
-                // Renumera os badges dos cards restantes
                 Array.from(itensContainer.children).forEach((c, idx) => {
                     const badge = c.querySelector('.item-badge');
                     if (badge) badge.textContent = `Item #${idx + 1}`;
@@ -460,22 +603,16 @@ export async function renderEmpenho(container) {
             
             for (let i = 0; i < itensNodes.length; i++) {
                 const node = itensNodes[i];
-                const desc = node.querySelector('.item-desc').value.trim();
-                const qtd = parseFloat(node.querySelector('.item-qtd').value);
-                const un = node.querySelector('.item-un').value;
                 const siafisico = node.querySelector('.item-siafisico').value.trim();
                 const compras = node.querySelector('.item-compras').value.trim();
+                const desc = node.querySelector('.item-desc').value.trim();
+                const vUnit = parseFloat(node.querySelector('.item-vunit').value);
+                const qtd = parseFloat(node.querySelector('.item-qtd').value);
+                const un = node.querySelector('.item-un').value;
                 const nat = node.querySelector('.item-nat').value;
                 const per = node.querySelector('.item-per').value === 'Sim';
                 const gar = node.querySelector('.item-gar') ? node.querySelector('.item-gar').checked : false;
-
-                if (!desc) {
-                    showToast({ message: `Informe a descrição do item #${i + 1}.`, type: 'warning' });
-                    btn.disabled = false;
-                    btn.innerHTML = 'Salvar Nota de Empenho';
-                    node.querySelector('.item-desc').focus();
-                    return;
-                }
+                const substituirCat = node.dataset.substituirCatalogo === 'true';
 
                 if (!siafisico) {
                     showToast({ message: `Informe o Cód. Siafísico do item #${i + 1}.`, type: 'warning' });
@@ -493,6 +630,22 @@ export async function renderEmpenho(container) {
                     return;
                 }
 
+                if (!desc) {
+                    showToast({ message: `Informe a descrição do item #${i + 1}.`, type: 'warning' });
+                    btn.disabled = false;
+                    btn.innerHTML = 'Salvar Nota de Empenho';
+                    node.querySelector('.item-desc').focus();
+                    return;
+                }
+
+                if (isNaN(vUnit) || vUnit < 0) {
+                    showToast({ message: `Informe um valor unitário válido para o item #${i + 1}.`, type: 'warning' });
+                    btn.disabled = false;
+                    btn.innerHTML = 'Salvar Nota de Empenho';
+                    node.querySelector('.item-vunit').focus();
+                    return;
+                }
+
                 if (isNaN(qtd) || qtd <= 0) {
                     showToast({ message: `Informe uma quantidade válida para o item #${i + 1}.`, type: 'warning' });
                     btn.disabled = false;
@@ -505,12 +658,14 @@ export async function renderEmpenho(container) {
                     descricao: desc,
                     quantidade: qtd,
                     unidade: un,
+                    valor_unitario: vUnit,
                     codigo_siafisico: siafisico,
                     codigo_compras: compras,
                     natureza_despesa: nat || null,
                     perecivel: per,
                     garantia: gar,
-                    data_garantia: null
+                    data_garantia: null,
+                    substituir_catalogo: substituirCat
                 });
             }
 
