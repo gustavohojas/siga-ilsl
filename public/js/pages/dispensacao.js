@@ -77,7 +77,7 @@ export async function renderDispensacao(container) {
                                     <th>Material / Descrição</th>
                                     <th>Lote</th>
                                     <th>Validade</th>
-                                    <th>Disponível</th>
+                                    <th title="Informe a unidade em que o produto será dispensado aos centros consumidores">Disponível (Menor un.)</th>
                                     <th style="width: 160px; text-align:center;">Qtd a Dispensar</th>
                                     <th style="width: 60px;">Remover</th>
                                 </tr>
@@ -279,7 +279,7 @@ export async function renderDispensacao(container) {
                     </td>
                     <td>${loteBadge}</td>
                     <td>${valFormatada}</td>
-                    <td><span class="badge badge-secondary">${item.saldo_disponivel} ${item.unidade || ''}</span></td>
+                    <td><span class="badge badge-secondary" title="Menor un. de dispensação: ${item.unidade || ''}">${item.saldo_disponivel} ${item.unidade || ''}</span></td>
                     <td style="text-align:center;">
                         <div style="display:inline-flex; align-items:center; gap:4px;">
                             <button type="button" class="btn btn-secondary btn-sm btn-qtd-dim" data-idx="${idx}" style="padding:2px 8px;">-</button>

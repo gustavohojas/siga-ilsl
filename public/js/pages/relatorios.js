@@ -208,7 +208,7 @@ export async function renderRelatorios(container) {
 
             let html = '<table class="table"><thead><tr>';
             if (tipo === 'total') {
-                html += '<th>Item / Descrição</th><th>Cód. Siafísico</th><th>Cód. Compras</th><th>Unidade</th><th>Estoque Atual</th><th>Nat. Despesa</th></tr></thead><tbody>';
+                html += '<th>Item / Descrição</th><th>Cód. Siafísico</th><th>Cód. Compras</th><th title="Informe a unidade em que o produto será dispensado aos centros consumidores">Menor un. de dispensação <i class="fas fa-info-circle text-muted" title="Informe a unidade em que o produto será dispensado aos centros consumidores" style="cursor:help; font-size:0.75rem;"></i></th><th>Estoque Atual</th><th>Nat. Despesa</th></tr></thead><tbody>';
                 html += data.map(i => {
                     const qtd = i.quantidade_atual !== undefined ? i.quantidade_atual : (i.quantidade || 0);
                     return `
@@ -223,7 +223,7 @@ export async function renderRelatorios(container) {
                     `;
                 }).join('');
             } else if (tipo === 'validade') {
-                html += '<th>Item / Descrição</th><th>Data de Validade</th><th>Situação</th><th>Estoque Atual</th><th>Unidade</th></tr></thead><tbody>';
+                html += '<th>Item / Descrição</th><th>Data de Validade</th><th>Situação</th><th>Estoque Atual</th><th title="Informe a unidade em que o produto será dispensado aos centros consumidores">Menor un. de dispensação <i class="fas fa-info-circle text-muted" title="Informe a unidade em que o produto será dispensado aos centros consumidores" style="cursor:help; font-size:0.75rem;"></i></th></tr></thead><tbody>';
                 html += data.map(i => {
                     const dataVal = i.validade ? new Date(i.validade) : null;
                     const vencido = dataVal && dataVal < new Date();
@@ -239,7 +239,7 @@ export async function renderRelatorios(container) {
                     `;
                 }).join('');
             } else if (tipo === 'garantia') {
-                html += '<th>Item / Descrição</th><th>Data da Garantia</th><th>Situação</th><th>Estoque Atual</th><th>Unidade</th></tr></thead><tbody>';
+                html += '<th>Item / Descrição</th><th>Data da Garantia</th><th>Situação</th><th>Estoque Atual</th><th title="Informe a unidade em que o produto será dispensado aos centros consumidores">Menor un. de dispensação <i class="fas fa-info-circle text-muted" title="Informe a unidade em que o produto será dispensado aos centros consumidores" style="cursor:help; font-size:0.75rem;"></i></th></tr></thead><tbody>';
                 const hoje = new Date();
                 hoje.setHours(0, 0, 0, 0);
                 html += data.map(i => {

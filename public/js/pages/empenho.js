@@ -334,8 +334,8 @@ export async function renderEmpenho(container) {
                     <input type="number" class="form-control item-qtd" placeholder="Qtd" required min="1" step="any" value="1">
                 </div>
                 <div class="form-group mb-0">
-                    <label class="form-label">Unidade de Medida *</label>
-                    <select class="form-control item-un" required>
+                    <label class="form-label" title="Informe a unidade em que o produto será dispensado aos centros consumidores">Menor un. de dispensação * <i class="fas fa-info-circle text-muted" title="Informe a unidade em que o produto será dispensado aos centros consumidores" style="cursor:help; font-size:0.85rem;"></i></label>
+                    <select class="form-control item-un" required title="Informe a unidade em que o produto será dispensado aos centros consumidores">
                         <option value="Unidade">Unidade</option>
                         <option value="Caixa">Caixa</option>
                         <option value="Pacote">Pacote</option>

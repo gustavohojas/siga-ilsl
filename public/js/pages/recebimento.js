@@ -303,7 +303,7 @@ export async function renderRecebimento(container) {
                         const tr = document.createElement('tr');
                         tr.innerHTML =
                             '<td><input type="checkbox" class="item-check" data-id="' + item.id + '"></td>' +
-                            '<td class="item-desc-text"><strong>' + item.descricao + '</strong><br><small style="color:var(--text-secondary)">' + (item.unidade || '') + '</small></td>' +
+                            '<td class="item-desc-text"><strong>' + item.descricao + '</strong><br><small style="color:var(--text-secondary)" title="Informe a unidade em que o produto será dispensado aos centros consumidores">Menor un. dispensação: <strong>' + (item.unidade || '-') + '</strong></small></td>' +
                             '<td>' + item.quantidade + '</td>' +
                             '<td>' + (item.quantidade_recebida || 0) + '</td>' +
                             '<td><input type="number" class="form-control item-qtd-rec" value="' + pendente + '" min="1" max="' + pendente + '" style="width:80px;" disabled></td>' +
@@ -496,8 +496,8 @@ export async function renderRecebimento(container) {
                 '<input type="text" class="form-control d-desc" required>' +
             '</div>' +
             '<div class="form-group" style="margin-bottom:0">' +
-                '<label class="form-label" style="font-size:0.8rem">Unidade</label>' +
-                '<select class="form-control d-un" required>' +
+                '<label class="form-label" style="font-size:0.8rem" title="Informe a unidade em que o produto será dispensado aos centros consumidores">Menor un. de dispensação <i class="fas fa-info-circle text-muted" title="Informe a unidade em que o produto será dispensado aos centros consumidores" style="cursor:help;"></i></label>' +
+                '<select class="form-control d-un" required title="Informe a unidade em que o produto será dispensado aos centros consumidores">' +
                     '<option value="Unidade">Unidade</option>' +
                     '<option value="Caixa">Caixa</option>' +
                     '<option value="Pacote">Pacote</option>' +

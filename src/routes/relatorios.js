@@ -40,7 +40,7 @@ router.get('/estoque/total', async (req, res) => {
                 { header: 'Cód. Compras', key: 'codigo_compras', width: 15 },
                 { header: 'Descrição', key: 'descricao', width: 40 },
                 { header: 'Qtd Atual', key: 'quantidade_atual', width: 15 },
-                { header: 'Unidade', key: 'unidade', width: 10 },
+                { header: 'Menor Un. de Dispensação', key: 'unidade', width: 25 },
                 { header: 'Validade', key: 'validade', width: 15 },
                 { header: 'Garantia', key: 'data_garantia', width: 15 },
                 { header: 'Natureza de Despesa', key: 'natureza_despesa', width: 20 }
@@ -162,7 +162,7 @@ router.get('/estoque/garantia', async (req, res) => {
                 { header: 'ID', key: 'id', width: 10 },
                 { header: 'Descrição', key: 'descricao', width: 40 },
                 { header: 'Quantidade', key: 'quantidade_atual', width: 15 },
-                { header: 'Unidade', key: 'unidade', width: 10 },
+                { header: 'Menor Un. de Dispensação', key: 'unidade', width: 25 },
                 { header: 'Data da Garantia', key: 'data_garantia_fmt', width: 18 },
                 { header: 'Situação', key: 'situacao', width: 18 }
             ];
