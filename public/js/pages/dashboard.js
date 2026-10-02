@@ -71,8 +71,9 @@ export async function renderDashboard(container) {
                 </div>
 
                 <div class="card">
-                    <div class="card-header">
-                        <h3>Últimas Atividades</h3>
+                    <div class="card-header" style="display: flex; justify-content: space-between; align-items: center;">
+                        <h3 style="margin: 0;">Últimas Atividades</h3>
+                        <a href="#dispensacao" style="font-size: 0.85rem; color: var(--accent-primary, #6366f1); text-decoration: none; font-weight: 500;">Ver histórico completo →</a>
                     </div>
                     <div class="card-body" id="atividades-recentes">
                         <p class="text-muted">Carregando atividades...</p>
