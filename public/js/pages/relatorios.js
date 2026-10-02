@@ -1,4 +1,4 @@
-import { api } from '../api.js';
+import { api, getToken } from '../api.js';
 import { showToast } from '../components/toast.js';
 
 export async function renderRelatorios(container) {
@@ -687,8 +687,10 @@ export async function renderRelatorios(container) {
                     row.nota_fiscal ? `NF ${row.nota_fiscal}` : null
                 ].filter(Boolean).join(' • ') || '-';
 
+                const token = getToken();
+                const tokenParam = token ? `?token=${encodeURIComponent(token)}` : '';
                 const guiaBtn = row.tem_pdf
-                    ? `<a href="/api/recebimentos/estornos/${row.id}/pdf" target="_blank" class="btn btn-secondary btn-sm" title="Visualizar Guia de Devolução" style="padding:4px 8px;"><i class="fas fa-file-pdf" style="color:#ef4444;"></i> Guia</a>`
+                    ? `<a href="/api/recebimentos/estornos/${row.id}/pdf${tokenParam}" target="_blank" class="btn btn-secondary btn-sm" title="Visualizar Guia de Devolução" style="padding:4px 8px;"><i class="fas fa-file-pdf" style="color:#ef4444;"></i> Guia</a>`
                     : '<span style="color:var(--text-muted);">-</span>';
 
                 return `

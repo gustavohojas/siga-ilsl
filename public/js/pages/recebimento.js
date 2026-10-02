@@ -1,4 +1,4 @@
-import { api } from '../api.js';
+import { api, getToken } from '../api.js';
 import { showToast } from '../components/toast.js';
 import { playSuccessBeep } from '../utils/audio.js';
 
@@ -1029,7 +1029,9 @@ export async function renderRecebimento(container) {
             
             if (result.guia_devolucao_id) {
                 sucessoGuiaWrapper.style.display = 'block';
-                btnAbrirGuiaDevolucao.href = `/api/recebimentos/estornos/${result.guia_devolucao_id}/pdf`;
+                const token = getToken();
+                const tokenParam = token ? `?token=${encodeURIComponent(token)}` : '';
+                btnAbrirGuiaDevolucao.href = `/api/recebimentos/estornos/${result.guia_devolucao_id}/pdf${tokenParam}`;
             } else {
                 sucessoGuiaWrapper.style.display = 'none';
             }

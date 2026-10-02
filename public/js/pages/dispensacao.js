@@ -1,4 +1,4 @@
-import { api } from '../api.js';
+import { api, getToken } from '../api.js';
 import { showToast } from '../components/toast.js';
 import { playSuccessBeep, playAlertBeep } from '../utils/audio.js';
 
@@ -611,12 +611,16 @@ export async function renderDispensacao(container) {
 
             // Sucesso!
             playSuccessBeep();
+            const token = getToken();
+            const tokenParam = token ? `?token=${encodeURIComponent(token)}` : '';
+            const pdfUrlComToken = `${response.pdf_url}${tokenParam}`;
+
             modalSucessoCodigo.textContent = `Guia nº: ${response.codigo}`;
-            btnAbrirPdfSucesso.href = response.pdf_url;
+            btnAbrirPdfSucesso.href = pdfUrlComToken;
             modalSucesso.style.display = 'flex';
 
             // Abre o PDF diretamente em nova aba do navegador para o usuário imprimir ou conferir
-            window.open(response.pdf_url, '_blank');
+            window.open(pdfUrlComToken, '_blank');
 
             // Limpa formulário e cesta
             cesta = [];
@@ -643,6 +647,9 @@ export async function renderDispensacao(container) {
         try {
             const data = await api.get('/dispensacoes');
             if (data && data.length > 0) {
+                const token = getToken();
+                const tokenParam = token ? `?token=${encodeURIComponent(token)}` : '';
+
                 tableRecent.innerHTML = data.slice(0, 15).map(d => {
                     const dataFormatada = d.criado_em ? new Date(d.criado_em).toLocaleString('pt-BR') : '-';
                     const centro = d.centro_consumidor_nome ? `${d.centro_consumidor_codigo ? d.centro_consumidor_codigo + ' - ' : ''}${d.centro_consumidor_nome}` : '-';
@@ -650,7 +657,7 @@ export async function renderDispensacao(container) {
                     const guiaBadge = d.guia_codigo ? `<span style="font-weight:600; color:var(--primary, #3b82f6);">${d.guia_codigo}</span>` : '<span style="color:var(--text-muted);">-</span>';
 
                     const printBtn = d.guia_id 
-                        ? `<a href="/api/dispensacoes/guias/${d.guia_id}/pdf" target="_blank" class="btn btn-secondary btn-sm" title="Reimprimir Ficha de Dispensação (PDF)" style="padding: 3px 8px;">
+                        ? `<a href="/api/dispensacoes/guias/${d.guia_id}/pdf${tokenParam}" target="_blank" class="btn btn-secondary btn-sm" title="Reimprimir Ficha de Dispensação (PDF)" style="padding: 3px 8px;">
                                <i class="fas fa-print"></i> Reabrir PDF
                            </a>`
                         : '<span style="color:var(--text-muted); font-size:0.8rem;">Antiga</span>';
