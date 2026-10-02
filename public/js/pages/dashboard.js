@@ -93,7 +93,7 @@ export async function renderDashboard(container) {
         ]);
 
         const totalItens = Array.isArray(estoqueRes) 
-            ? estoqueRes.reduce((acc, curr) => acc + (curr.quantidade_atual !== undefined ? curr.quantidade_atual : curr.quantidade || 0), 0) 
+            ? estoqueRes.reduce((acc, curr) => acc + Number(curr.quantidade_atual !== undefined ? curr.quantidade_atual : (curr.quantidade || 0)), 0) 
             : 0;
         const totalEmpenhos = Array.isArray(empenhosRes) ? empenhosRes.length : 0;
         const totalCentros = Array.isArray(centrosRes) ? centrosRes.length : 0;

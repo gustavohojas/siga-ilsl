@@ -27,7 +27,7 @@ router.get('/estoque/total', async (req, res) => {
     try {
         const { all } = getDb();
         const query = `
-            SELECT id, codigo_siafisico, codigo_compras, descricao, quantidade_atual, unidade, validade, garantia, data_garantia, natureza_despesa
+            SELECT id, codigo_siafisico, codigo_compras, descricao, quantidade_atual::float as quantidade_atual, unidade, validade, garantia, data_garantia, natureza_despesa
             FROM estoque
             ORDER BY descricao ASC
         `;
@@ -121,7 +121,7 @@ router.get('/estoque/validade', async (req, res) => {
     try {
         const { all } = getDb();
         const query = `
-            SELECT id, descricao, quantidade_atual, validade
+            SELECT id, descricao, quantidade_atual::float as quantidade_atual, validade
             FROM estoque
             WHERE perecivel = TRUE AND validade IS NOT NULL AND quantidade_atual > 0
             ORDER BY validade ASC
@@ -150,7 +150,7 @@ router.get('/estoque/garantia', async (req, res) => {
     try {
         const { all } = getDb();
         const query = `
-            SELECT id, codigo_siafisico, codigo_compras, descricao, quantidade_atual, unidade, validade, garantia, data_garantia
+            SELECT id, codigo_siafisico, codigo_compras, descricao, quantidade_atual::float as quantidade_atual, unidade, validade, garantia, data_garantia
             FROM estoque
             WHERE garantia = TRUE AND data_garantia IS NOT NULL AND quantidade_atual > 0
             ORDER BY data_garantia ASC
