@@ -125,7 +125,7 @@ function gerarPdfGuiaDispensacao(guiaInfo) {
                 }
                 doc.text(valFormatada, 400, y + 6, { width: 55 });
 
-                doc.font('Helvetica-Bold').text(String(it.quantidade), 460, y + 6, { width: 40, align: 'right' });
+                doc.font('Helvetica-Bold').text(Number(it.quantidade).toLocaleString('pt-BR'), 460, y + 6, { width: 40, align: 'right' });
                 doc.font('Helvetica').text(it.unidade || '', 510, y + 6, { width: 35 });
 
                 y += 22;
@@ -274,7 +274,7 @@ function gerarPdfGuiaDevolucao(devInfo) {
             doc.text(devInfo.lote || '-', 280, y + 7, { width: 70 });
             doc.text(devInfo.validade || '-', 360, y + 7, { width: 60 });
             doc.font('Helvetica-Bold').fillColor(dangerColor);
-            doc.text(String(devInfo.quantidade), 430, y + 7, { width: 65, align: 'right' });
+            doc.text(Number(devInfo.quantidade).toLocaleString('pt-BR'), 430, y + 7, { width: 65, align: 'right' });
             doc.fillColor(textColor).font('Helvetica');
             doc.text(devInfo.unidade || '', 510, y + 7, { width: 35 });
 

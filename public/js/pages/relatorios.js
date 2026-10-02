@@ -1,5 +1,6 @@
 import { api, getToken } from '../api.js';
 import { showToast } from '../components/toast.js';
+import { formatQtd } from '../utils/format.js';
 
 export async function renderRelatorios(container) {
     container.innerHTML = `
@@ -374,7 +375,7 @@ export async function renderRelatorios(container) {
                             <td>${i.codigo_siafisico || '-'}</td>
                             <td>${i.codigo_compras || '-'}</td>
                             <td>${i.unidade || '-'}</td>
-                            <td><span class="badge ${qtd > 0 ? 'badge-success' : 'badge-danger'}" style="font-size:0.85rem;">${qtd}</span></td>
+                            <td><span class="badge ${qtd > 0 ? 'badge-success' : 'badge-danger'}" style="font-size:0.85rem;">${formatQtd(qtd)}</span></td>
                             <td>${i.natureza_despesa || '-'}</td>
                         </tr>
                     `;
@@ -390,7 +391,7 @@ export async function renderRelatorios(container) {
                             <td><strong>${i.descricao}</strong></td>
                             <td class="${vencido ? 'text-danger' : 'text-warning'}"><strong>${dataVal ? dataVal.toLocaleDateString('pt-BR') : '-'}</strong></td>
                             <td>${vencido ? '<span class="badge badge-danger">Vencido</span>' : '<span class="badge badge-warning">Em Validade</span>'}</td>
-                            <td><span class="badge badge-info" style="font-size:0.85rem;">${qtd}</span></td>
+                            <td><span class="badge badge-info" style="font-size:0.85rem;">${formatQtd(qtd)}</span></td>
                             <td>${i.unidade || '-'}</td>
                         </tr>
                     `;
@@ -413,14 +414,14 @@ export async function renderRelatorios(container) {
                             <td><strong>${i.descricao}</strong></td>
                             <td class="${vencido ? 'text-danger' : 'text-primary'}"><strong>${dataGar ? dataGar.toLocaleDateString('pt-BR') : '-'}</strong></td>
                             <td>${vencido ? '<span class="badge badge-danger">Garantia Vencida</span>' : '<span class="badge badge-success">Em Garantia</span>'}</td>
-                            <td><span class="badge badge-info" style="font-size:0.85rem;">${qtd}</span></td>
+                            <td><span class="badge badge-info" style="font-size:0.85rem;">${formatQtd(qtd)}</span></td>
                             <td>${i.unidade || '-'}</td>
                         </tr>
                     `;
                 }).join('');
             } else {
                 html += '<th>Data</th><th>Tipo</th><th>Qtd</th><th>Usuário</th></tr></thead><tbody>';
-                html += data.map(i => `<tr><td>${new Date(i.createdAt).toLocaleString()}</td><td>${i.tipo}</td><td>${i.quantidade}</td><td>${i.usuario?.nome || '-'}</td></tr>`).join('');
+                html += data.map(i => `<tr><td>${new Date(i.createdAt).toLocaleString()}</td><td>${i.tipo}</td><td>${formatQtd(i.quantidade)}</td><td>${i.usuario?.nome || '-'}</td></tr>`).join('');
             }
             html += '</tbody></table>';
             estoqueContent.innerHTML = html;
@@ -481,10 +482,10 @@ export async function renderRelatorios(container) {
             let html = '<table class="table"><thead><tr>';
             if (tipo === 'entregues') {
                 html += '<th>Data Entrega</th><th>NE</th><th>Item</th><th>Qtd</th></tr></thead><tbody>';
-                html += data.map(i => `<tr><td>${new Date(i.data_entrega).toLocaleDateString()}</td><td>${i.empenho?.numero || '-'}</td><td>${i.item?.descricao || '-'}</td><td>${i.quantidade}</td></tr>`).join('');
+                html += data.map(i => `<tr><td>${new Date(i.data_entrega).toLocaleDateString()}</td><td>${i.empenho?.numero || '-'}</td><td>${i.item?.descricao || '-'}</td><td>${formatQtd(i.quantidade)}</td></tr>`).join('');
             } else {
                 html += '<th>NE</th><th>Item</th><th>Qtd a Receber</th><th>Prazo</th></tr></thead><tbody>';
-                html += data.map(i => `<tr><td>${i.empenho?.numero || '-'}</td><td>${i.item?.descricao || '-'}</td><td>${i.quantidade_restante}</td><td class="text-danger">${new Date(i.prazo_data).toLocaleDateString()}</td></tr>`).join('');
+                html += data.map(i => `<tr><td>${i.empenho?.numero || '-'}</td><td>${i.item?.descricao || '-'}</td><td>${formatQtd(i.quantidade_restante)}</td><td class="text-danger">${new Date(i.prazo_data).toLocaleDateString()}</td></tr>`).join('');
             }
             html += '</tbody></table>';
             empresaContent.innerHTML = html;
@@ -535,10 +536,10 @@ export async function renderRelatorios(container) {
             let html = '<table class="table"><thead><tr>';
             if (tipo === 'historico') {
                 html += '<th>Data</th><th>Item</th><th>Qtd</th><th>Usuário</th></tr></thead><tbody>';
-                html += data.map(i => `<tr><td>${new Date(i.data_dispensacao || i.createdAt).toLocaleString()}</td><td>${i.estoque?.descricao || '-'}</td><td>${i.quantidade}</td><td>${i.usuario?.nome || '-'}</td></tr>`).join('');
+                html += data.map(i => `<tr><td>${new Date(i.data_dispensacao || i.createdAt).toLocaleString()}</td><td>${i.estoque?.descricao || '-'}</td><td>${formatQtd(i.quantidade)}</td><td>${i.usuario?.nome || '-'}</td></tr>`).join('');
             } else {
                 html += '<th>Item</th><th>Total Consumido</th></tr></thead><tbody>';
-                html += data.map(i => `<tr><td>${i.descricao}</td><td>${i.total}</td></tr>`).join('');
+                html += data.map(i => `<tr><td>${i.descricao}</td><td>${formatQtd(i.total)}</td></tr>`).join('');
             }
             html += '</tbody></table>';
             centroContent.innerHTML = html;
@@ -608,7 +609,7 @@ export async function renderRelatorios(container) {
                         <td>${loteBadge}</td>
                         <td><strong>${row.descricao}</strong></td>
                         <td>${codigos}</td>
-                        <td><strong>${row.quantidade} ${row.unidade || ''}</strong></td>
+                        <td><strong>${formatQtd(row.quantidade)} ${row.unidade || ''}</strong></td>
                         <td>${dataValidade}</td>
                         <td><span style="font-weight:500;">${row.localizacao_destino}</span></td>
                         <td>${dataFormatada}</td>
@@ -700,7 +701,7 @@ export async function renderRelatorios(container) {
                         <td>${motivoBadge}</td>
                         <td><strong>${row.item_descricao || '-'}</strong></td>
                         <td>${loteBadge}</td>
-                        <td><strong style="color:#ef4444;">${row.quantidade_estornada} ${row.unidade || ''}</strong></td>
+                        <td><strong style="color:#ef4444;">${formatQtd(row.quantidade_estornada)} ${row.unidade || ''}</strong></td>
                         <td style="font-size:0.85rem;">${docOrigem}</td>
                         <td style="font-size:0.85rem;">${row.fornecedor_doador || '-'}</td>
                         <td style="max-width:250px; font-size:0.85rem; word-break:break-word;">${row.justificativa || '-'}</td>
@@ -935,7 +936,7 @@ export async function renderRelatorios(container) {
             html += `
                 <tr>
                     <td><strong>${it.descricao}</strong></td>
-                    <td style="text-align: center;"><span class="badge badge-secondary">${it.quantidade}</span></td>
+                    <td style="text-align: center;"><span class="badge badge-secondary">${formatQtd(it.quantidade)}</span></td>
                     <td>${it.unidade || '-'}</td>
                     <td style="text-align: right; color: #10b981; font-weight: 600;">${formatCurrency(it.valor_total)}</td>
                 </tr>

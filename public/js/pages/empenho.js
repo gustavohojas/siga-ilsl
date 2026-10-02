@@ -1,5 +1,6 @@
 import { api } from '../api.js';
 import { showToast } from '../components/toast.js';
+import { formatQtd } from '../utils/format.js';
 
 export async function renderEmpenho(container) {
     container.innerHTML = `
@@ -230,9 +231,9 @@ export async function renderEmpenho(container) {
                                                         <td>${it.codigo_compras || '-'}</td>
                                                         <td>${it.natureza_despesa || '-'}</td>
                                                         <td>${vUnit.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</td>
-                                                        <td>${it.quantidade} ${it.unidade}</td>
+                                                        <td>${formatQtd(it.quantidade)} ${it.unidade}</td>
                                                         <td style="font-weight: 600; color: #10b981;">${itemTot.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</td>
-                                                        <td><span class="badge ${it.quantidade_recebida >= it.quantidade ? 'badge-success' : 'badge-warning'}">${it.quantidade_recebida || 0} / ${it.quantidade}</span></td>
+                                                        <td><span class="badge ${it.quantidade_recebida >= it.quantidade ? 'badge-success' : 'badge-warning'}">${formatQtd(it.quantidade_recebida || 0)} / ${formatQtd(it.quantidade)}</span></td>
                                                         <td>${it.perecivel ? '<span class="badge badge-warning">Sim</span>' : '<span class="badge badge-role">Não</span>'}</td>
                                                         <td>${it.garantia ? ('<span class="badge badge-info">Sim' + (dataGarFmt ? ` (${dataGarFmt})` : '') + '</span>') : '<span class="badge badge-role">Não</span>'}</td>
                                                     </tr>

@@ -1,6 +1,7 @@
 import { api, getToken } from '../api.js';
 import { showToast } from '../components/toast.js';
 import { playSuccessBeep, playAlertBeep } from '../utils/audio.js';
+import { formatQtd } from '../utils/format.js';
 
 export async function renderDispensacao(container) {
     container.innerHTML = `
@@ -295,7 +296,7 @@ export async function renderDispensacao(container) {
                     </td>
                     <td>${loteBadge}</td>
                     <td>${valFormatada}</td>
-                    <td><span class="badge badge-secondary" title="Menor un. de dispensação: ${item.unidade || ''}">${item.saldo_disponivel} ${item.unidade || ''}</span></td>
+                    <td><span class="badge badge-secondary" title="Menor un. de dispensação: ${item.unidade || ''}">${formatQtd(item.saldo_disponivel)} ${item.unidade || ''}</span></td>
                     <td style="text-align:center;">
                         <div style="display:inline-flex; align-items:center; gap:4px;">
                             <button type="button" class="btn btn-secondary btn-sm btn-qtd-dim" data-idx="${idx}" style="padding:2px 8px;">-</button>
@@ -422,7 +423,7 @@ export async function renderDispensacao(container) {
                 <tr>
                     <td>${loteBadge}</td>
                     <td>${valFormatada}</td>
-                    <td><strong>${it.quantidade_atual} ${it.unidade || ''}</strong></td>
+                    <td><strong>${formatQtd(it.quantidade_atual)} ${it.unidade || ''}</strong></td>
                     <td style="text-align: right;">
                         <button type="button" class="btn btn-primary btn-sm btn-selecionar-lote" data-id="${it.id}">
                             Selecionar Este Lote
@@ -534,7 +535,7 @@ export async function renderDispensacao(container) {
                         <td><strong>${it.descricao}</strong></td>
                         <td>${it.lote ? `<span style="font-family:monospace; color:#60a5fa;">${it.lote}</span>` : '-'}</td>
                         <td>${valFormatada}</td>
-                        <td>${it.quantidade_atual} ${it.unidade || ''}</td>
+                        <td>${formatQtd(it.quantidade_atual)} ${it.unidade || ''}</td>
                         <td>
                             <button type="button" class="btn btn-primary btn-sm btn-add-manual" data-id="${it.id}">
                                 + Adicionar
@@ -668,7 +669,7 @@ export async function renderDispensacao(container) {
                             <td>${dataFormatada}</td>
                             <td><strong>${d.estoque_descricao || 'N/A'}</strong></td>
                             <td>${loteText}</td>
-                            <td><strong>${d.quantidade}</strong> ${d.unidade || ''}</td>
+                            <td><strong>${formatQtd(d.quantidade)}</strong> ${d.unidade || ''}</td>
                             <td>${centro}</td>
                             <td>${d.usuario_nome || '-'}</td>
                             <td style="text-align:center;">${printBtn}</td>

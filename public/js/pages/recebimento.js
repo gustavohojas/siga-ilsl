@@ -1,6 +1,7 @@
 import { api, getToken } from '../api.js';
 import { showToast } from '../components/toast.js';
 import { playSuccessBeep } from '../utils/audio.js';
+import { formatQtd } from '../utils/format.js';
 
 export async function renderRecebimento(container) {
     container.innerHTML = `
@@ -304,8 +305,8 @@ export async function renderRecebimento(container) {
                         tr.innerHTML =
                             '<td><input type="checkbox" class="item-check" data-id="' + item.id + '"></td>' +
                             '<td class="item-desc-text"><strong>' + item.descricao + '</strong><br><small style="color:var(--text-secondary)" title="Informe a unidade em que o produto será dispensado aos centros consumidores">Menor un. dispensação: <strong>' + (item.unidade || '-') + '</strong></small></td>' +
-                            '<td>' + item.quantidade + '</td>' +
-                            '<td>' + (item.quantidade_recebida || 0) + '</td>' +
+                            '<td>' + formatQtd(item.quantidade) + '</td>' +
+                            '<td>' + formatQtd(item.quantidade_recebida || 0) + '</td>' +
                             '<td><input type="number" class="form-control item-qtd-rec" value="' + pendente + '" min="1" max="' + pendente + '" style="width:80px;" disabled></td>' +
                             '<td><input type="text" class="form-control item-cod" placeholder="Bipe/digite" style="width:120px;" disabled></td>' +
                             '<td><input type="text" class="form-control item-lote" placeholder="Lote" style="width:110px;" disabled></td>' +
@@ -875,7 +876,7 @@ export async function renderRecebimento(container) {
 
             const saldoColor = saldoAtual > 0 ? '#10b981' : 'var(--text-muted)';
             const estornadoTxt = jaEstornado > 0 
-                ? `<span style="color:#f59e0b; font-weight:600;">${jaEstornado} ${item.unidade || ''}</span>`
+                ? `<span style="color:#f59e0b; font-weight:600;">${formatQtd(jaEstornado)} ${item.unidade || ''}</span>`
                 : '<span style="color:var(--text-muted);">-</span>';
 
             const acaoBtn = podeEstornar
@@ -893,8 +894,8 @@ export async function renderRecebimento(container) {
                     </td>
                     <td>${loteBadge}</td>
                     <td style="white-space:nowrap;">${validadeFmt}</td>
-                    <td><strong>${totalRec} ${item.unidade || ''}</strong></td>
-                    <td><strong style="color:${saldoColor};">${saldoAtual} ${item.unidade || ''}</strong></td>
+                    <td><strong>${formatQtd(totalRec)} ${item.unidade || ''}</strong></td>
+                    <td><strong style="color:${saldoColor};">${formatQtd(saldoAtual)} ${item.unidade || ''}</strong></td>
                     <td>${estornadoTxt}</td>
                     <td style="text-align:center;">${acaoBtn}</td>
                 </tr>
@@ -956,9 +957,9 @@ export async function renderRecebimento(container) {
 
         document.getElementById('estorno-item-id').value = itemParaEstorno.id;
         document.getElementById('estorno-item-desc').textContent = `${itemParaEstorno.descricao} (${itemParaEstorno.unidade || 'UN'}) ${itemParaEstorno.lote ? ' • Lote: ' + itemParaEstorno.lote : ''}`;
-        document.getElementById('estorno-qtd-original').textContent = `${original} ${itemParaEstorno.unidade || ''}`;
-        document.getElementById('estorno-saldo-atual').textContent = `${saldo} ${itemParaEstorno.unidade || ''}`;
-        document.getElementById('estorno-ja-estornado').textContent = `${jaEstornado} ${itemParaEstorno.unidade || ''}`;
+        document.getElementById('estorno-qtd-original').textContent = `${formatQtd(original)} ${itemParaEstorno.unidade || ''}`;
+        document.getElementById('estorno-saldo-atual').textContent = `${formatQtd(saldo)} ${itemParaEstorno.unidade || ''}`;
+        document.getElementById('estorno-ja-estornado').textContent = `${formatQtd(jaEstornado)} ${itemParaEstorno.unidade || ''}`;
 
         const inputQtd = document.getElementById('estorno-qtd');
         inputQtd.value = '';

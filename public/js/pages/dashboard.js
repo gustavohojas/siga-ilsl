@@ -1,5 +1,6 @@
 import { api } from '../api.js';
 import { showToast } from '../components/toast.js';
+import { formatQtd } from '../utils/format.js';
 
 export async function renderDashboard(container) {
     container.innerHTML = `
@@ -106,23 +107,23 @@ export async function renderDashboard(container) {
             statsContainer.innerHTML = `
                 <div class="stat-card clickable" onclick="if(!event.target.closest('a')) location.hash='#relatorios?tipo=total'">
                     <div class="stat-title">Total de Itens em Estoque</div>
-                    <div class="stat-value"><a href="#relatorios?tipo=total" title="Ver relatório de Estoque Total">${totalItens}</a></div>
+                    <div class="stat-value"><a href="#relatorios?tipo=total" title="Ver relatório de Estoque Total">${formatQtd(totalItens)}</a></div>
                 </div>
                 <div class="stat-card clickable" onclick="if(!event.target.closest('a')) location.hash='#empenho'">
                     <div class="stat-title">Empenhos Ativos</div>
-                    <div class="stat-value"><a href="#empenho" title="Ver Notas de Empenho">${totalEmpenhos}</a></div>
+                    <div class="stat-value"><a href="#empenho" title="Ver Notas de Empenho">${formatQtd(totalEmpenhos)}</a></div>
                 </div>
                 <div class="stat-card clickable" onclick="if(!event.target.closest('a')) location.hash='#centros'">
                     <div class="stat-title">Centros Consumidores</div>
-                    <div class="stat-value"><a href="#centros" title="Ver Centros Consumidores">${totalCentros}</a></div>
+                    <div class="stat-value"><a href="#centros" title="Ver Centros Consumidores">${formatQtd(totalCentros)}</a></div>
                 </div>
                 <div class="stat-card warning clickable" onclick="if(!event.target.closest('a')) location.hash='#relatorios?tipo=validade'">
                     <div class="stat-title">Itens Perecíveis / Validade</div>
-                    <div class="stat-value"><a href="#relatorios?tipo=validade" title="Ver relatório de Itens por Validade">${itensValidade.length}</a></div>
+                    <div class="stat-value"><a href="#relatorios?tipo=validade" title="Ver relatório de Itens por Validade">${formatQtd(itensValidade.length)}</a></div>
                 </div>
                 <div class="stat-card info clickable" onclick="if(!event.target.closest('a')) location.hash='#relatorios?tipo=garantia'">
                     <div class="stat-title">Itens em Garantia</div>
-                    <div class="stat-value"><a href="#relatorios?tipo=garantia" title="Ver relatório de Itens por Garantia">${itensGarantia.length}</a></div>
+                    <div class="stat-value"><a href="#relatorios?tipo=garantia" title="Ver relatório de Itens por Garantia">${formatQtd(itensGarantia.length)}</a></div>
                 </div>
             `;
         }
@@ -137,7 +138,7 @@ export async function renderDashboard(container) {
                         <tr>
                             <td><strong>${item.descricao || 'N/A'}</strong></td>
                             <td class="${vencido ? 'text-danger' : 'text-warning'}">${dataVal ? dataVal.toLocaleDateString('pt-BR') : '-'}</td>
-                            <td>${item.quantidade_atual !== undefined ? item.quantidade_atual : item.quantidade || 0} ${item.unidade || ''}</td>
+                            <td>${formatQtd(item.quantidade_atual !== undefined ? item.quantidade_atual : item.quantidade || 0)} ${item.unidade || ''}</td>
                         </tr>
                     `;
                 }).join('');
@@ -163,7 +164,7 @@ export async function renderDashboard(container) {
                         <tr>
                             <td><strong>${item.descricao || 'N/A'}</strong></td>
                             <td class="${vencido ? 'text-danger' : 'text-primary'}">${dataGar ? dataGar.toLocaleDateString('pt-BR') : '-'}</td>
-                            <td>${item.quantidade_atual !== undefined ? item.quantidade_atual : item.quantidade || 0} ${item.unidade || ''}</td>
+                            <td>${formatQtd(item.quantidade_atual !== undefined ? item.quantidade_atual : item.quantidade || 0)} ${item.unidade || ''}</td>
                         </tr>
                     `;
                 }).join('');
@@ -181,7 +182,7 @@ export async function renderDashboard(container) {
                         <div style="padding: 0.75rem 0; border-bottom: 1px solid var(--border-glass);">
                             <div style="display:flex; justify-content:space-between; align-items:center;">
                                 <strong>Dispensação: ${d.estoque_descricao || 'Material'}</strong>
-                                <span class="badge badge-info">${d.quantidade} ${d.unidade || 'un'}</span>
+                                <span class="badge badge-info">${formatQtd(d.quantidade)} ${d.unidade || 'un'}</span>
                             </div>
                             <small style="color: var(--text-muted);">Para: ${d.centro_consumidor_nome || 'Setor'} • ${dataStr}</small>
                         </div>
