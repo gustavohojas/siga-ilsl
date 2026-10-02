@@ -30,6 +30,7 @@ function gerarPdfGuiaDispensacao(guiaInfo) {
             doc.on('error', err => reject(err));
 
             const primaryColor = '#1e3a8a'; // Azul escuro formal
+            const greenIlsl = '#0b5d36'; // Verde institucional ILSL
             const textColor = '#1f2937';
             const lightBg = '#f3f4f6';
             const borderColor = '#d1d5db';
@@ -37,7 +38,7 @@ function gerarPdfGuiaDispensacao(guiaInfo) {
             // --- CABEÇALHO INSTITUCIONAL ---
             doc.rect(40, 40, 515, 60).fillAndStroke(lightBg, borderColor);
 
-            doc.fillColor(primaryColor)
+            doc.fillColor(greenIlsl)
                .font('Helvetica-Bold')
                .fontSize(13)
                .text('INSTITUTO LAURO DE SOUZA LIMA', 50, 48, { align: 'center', width: 495 });
@@ -190,6 +191,7 @@ function gerarPdfGuiaDevolucao(devInfo) {
             doc.on('error', err => reject(err));
 
             const dangerColor = '#991b1b'; // Vermelho institucional formal para devoluções
+            const greenIlsl = '#0b5d36'; // Verde institucional ILSL
             const textColor = '#1f2937';
             const lightBg = '#fef2f2';
             const borderColor = '#f87171';
@@ -197,7 +199,7 @@ function gerarPdfGuiaDevolucao(devInfo) {
             // --- CABEÇALHO ---
             doc.rect(40, 40, 515, 60).fillAndStroke(lightBg, borderColor);
 
-            doc.fillColor(dangerColor)
+            doc.fillColor(greenIlsl)
                .font('Helvetica-Bold')
                .fontSize(13)
                .text('INSTITUTO LAURO DE SOUZA LIMA', 50, 48, { align: 'center', width: 495 });
