@@ -130,7 +130,7 @@ export async function renderDashboard(container) {
         const validadeTableBody = document.querySelector('#validade-table tbody');
         if (validadeTableBody) {
             if (itensValidade.length > 0) {
-                validadeTableBody.innerHTML = itensValidade.slice(0, 5).map(item => {
+                validadeTableBody.innerHTML = itensValidade.slice(0, 6).map(item => {
                     const dataVal = item.validade ? new Date(item.validade) : null;
                     const vencido = dataVal && dataVal < new Date();
                     return `
@@ -151,7 +151,7 @@ export async function renderDashboard(container) {
             if (itensGarantia.length > 0) {
                 const hoje = new Date();
                 hoje.setHours(0, 0, 0, 0);
-                garantiaTableBody.innerHTML = itensGarantia.slice(0, 5).map(item => {
+                garantiaTableBody.innerHTML = itensGarantia.slice(0, 6).map(item => {
                     const dataGarStr = item.data_garantia ? String(item.data_garantia).split('T')[0] : '';
                     let dataGar = null;
                     if (dataGarStr) {
@@ -175,7 +175,7 @@ export async function renderDashboard(container) {
         const atividadesContainer = document.getElementById('atividades-recentes');
         if (atividadesContainer) {
             if (Array.isArray(dispRes) && dispRes.length > 0) {
-                atividadesContainer.innerHTML = dispRes.slice(0, 4).map(d => {
+                atividadesContainer.innerHTML = dispRes.slice(0, 6).map(d => {
                     const dataStr = d.criado_em ? new Date(d.criado_em).toLocaleString('pt-BR') : '';
                     return `
                         <div style="padding: 0.75rem 0; border-bottom: 1px solid var(--border-glass);">
