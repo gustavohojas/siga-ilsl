@@ -375,11 +375,11 @@ export async function renderEmpenho(container) {
             </div>
 
             <!-- LINHA 2: VALOR UNITÁRIO, QUANTIDADE, MENOR UNIDADE E TOTAL -->
-            <div style="display: grid; grid-template-columns: 1.2fr 1fr 1.5fr 1.3fr; gap: 1rem; align-items: end; margin-bottom: 1rem;">
+            <div style="display: grid; grid-template-columns: 1.2fr 1fr 1.5fr 1.3fr; gap: 1rem; align-items: start; margin-bottom: 1rem;">
                 <div class="form-group mb-0">
                     <label class="form-label">Valor Unitário (R$) *</label>
                     <input type="number" class="form-control item-vunit" placeholder="0,00" required min="0" step="0.0001" value="0.00">
-                    <small class="text-muted" style="font-size: 0.72rem;">Menor un. dispensação</small>
+                    <small class="text-muted" style="font-size: 0.72rem; display: block; margin-top: 4px;">Menor un. dispensação</small>
                 </div>
                 <div class="form-group mb-0">
                     <label class="form-label">Quantidade *</label>
@@ -407,9 +407,11 @@ export async function renderEmpenho(container) {
                         <option value="Outros">Outros</option>
                     </select>
                 </div>
-                <div class="form-group mb-0" style="padding: 0.5rem; background: rgba(16, 185, 129, 0.08); border-radius: 8px; border: 1px solid rgba(16, 185, 129, 0.2); text-align: center;">
-                    <label class="form-label" style="margin-bottom: 2px; color: #10b981;">Total do Item</label>
-                    <div class="item-total-display" style="font-weight: 700; font-size: 1.05rem; color: #10b981;">R$ 0,00</div>
+                <div class="form-group mb-0">
+                    <label class="form-label" style="color: #10b981; text-align: center;">Total do Item</label>
+                    <div class="item-total-display" style="display: flex; align-items: center; justify-content: center; height: 42px; font-weight: 700; font-size: 1.05rem; color: #10b981; background: rgba(16, 185, 129, 0.08); border-radius: var(--radius-sm, 8px); border: 1px solid rgba(16, 185, 129, 0.25);">
+                        R$ 0,00
+                    </div>
                 </div>
             </div>
 
